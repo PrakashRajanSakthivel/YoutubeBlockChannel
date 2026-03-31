@@ -32,6 +32,7 @@ sealed interface Route {
     @Serializable data class ProfileEdit(val profileId: String) : Route
     @Serializable data class WatchStats(val profileId: String) : Route
     @Serializable data class ExportImport(val parentAccountId: String) : Route
+    @Serializable data class BlockedChannels(val profileId: String) : Route
     @Serializable data class PlaylistDetail(
         val profileId: String,
         val playlistId: String,

@@ -85,6 +85,15 @@ fun WhitelistManagerScreen(
                             contentDescription = "Back"
                         )
                     }
+                },
+                actions = {
+                    IconButton(onClick = viewModel::showAddUrlDialog) {
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = "Add from URL",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             )
         },
@@ -98,8 +107,7 @@ fun WhitelistManagerScreen(
             FilterChipRow(
                 selectedType = uiState.filterType,
                 onFilterSelected = viewModel::setFilter,
-                onFilterCleared = viewModel::clearFilter,
-                onAdd = viewModel::showAddUrlDialog
+                onFilterCleared = viewModel::clearFilter
             )
 
             when {
@@ -141,8 +149,7 @@ fun WhitelistManagerScreen(
 private fun FilterChipRow(
     selectedType: WhitelistItemType?,
     onFilterSelected: (WhitelistItemType) -> Unit,
-    onFilterCleared: () -> Unit,
-    onAdd: () -> Unit
+    onFilterCleared: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -161,14 +168,6 @@ private fun FilterChipRow(
                 selected = selectedType == type,
                 onClick = { onFilterSelected(type) },
                 label = { Text(type.displayName()) }
-            )
-        }
-        Spacer(modifier = Modifier.weight(1f))
-        IconButton(onClick = onAdd) {
-            Icon(
-                Icons.Default.Add,
-                contentDescription = "Add from URL",
-                tint = MaterialTheme.colorScheme.primary
             )
         }
     }

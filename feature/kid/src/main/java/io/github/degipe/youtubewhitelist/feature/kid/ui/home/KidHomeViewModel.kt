@@ -7,6 +7,7 @@ import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.degipe.youtubewhitelist.core.data.model.WhitelistItem
+import io.github.degipe.youtubewhitelist.core.data.repository.BlocklistRepository
 import io.github.degipe.youtubewhitelist.core.data.repository.KidProfileRepository
 import io.github.degipe.youtubewhitelist.core.data.repository.WhitelistRepository
 import io.github.degipe.youtubewhitelist.core.data.sleep.SleepTimerManager
@@ -35,6 +36,7 @@ class KidHomeViewModel @AssistedInject constructor(
     kidProfileRepository: KidProfileRepository,
     timeLimitChecker: TimeLimitChecker,
     sleepTimerManager: SleepTimerManager,
+    blocklistRepository: BlocklistRepository,
     @Assisted private val profileId: String
 ) : ViewModel() {
 
@@ -50,16 +52,20 @@ class KidHomeViewModel @AssistedInject constructor(
         whitelistRepository.getPlaylistsByProfile(profileId),
         combine(
             timeLimitChecker.getTimeLimitStatus(profileId),
-            sleepTimerManager.state
-        ) { timeLimit, sleepState -> timeLimit to sleepState }
-    ) { profile, channels, videos, playlists, (timeLimitStatus, sleepState) ->
+            sleepTimerManager.state,
+            blocklistRepository.getBlockedChannelIdsFlow(profileId)
+        ) { timeLimit, sleepState, blockedIds -> Triple(timeLimit, sleepState, blockedIds) }
+    ) { profile, channels, videos, playlists, combined ->
+        val (timeLimitStatus, sleepState, blockedIds) = combined
+        val blockedSet = blockedIds.toSet()
+        val filteredChannels = channels.filter { it.youtubeId !in blockedSet }
         KidHomeUiState(
             profileName = profile?.name ?: "",
-            channels = channels,
+            channels = filteredChannels,
             recentVideos = videos,
             playlists = playlists,
             isLoading = false,
-            isEmpty = channels.isEmpty() && videos.isEmpty() && playlists.isEmpty(),
+            isEmpty = filteredChannels.isEmpty() && videos.isEmpty() && playlists.isEmpty(),
             remainingTimeFormatted = timeLimitStatus.remainingSeconds?.let { formatRemaining(it) },
             isTimeLimitReached = timeLimitStatus.isLimitReached,
             isSleepTimerExpired = sleepState.status == SleepTimerStatus.EXPIRED

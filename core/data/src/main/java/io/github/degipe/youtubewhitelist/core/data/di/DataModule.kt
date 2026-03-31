@@ -5,11 +5,13 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import io.github.degipe.youtubewhitelist.core.data.repository.BlocklistRepository
 import io.github.degipe.youtubewhitelist.core.data.repository.ChannelVideoCacheRepository
 import io.github.degipe.youtubewhitelist.core.data.repository.KidProfileRepository
 import io.github.degipe.youtubewhitelist.core.data.repository.WatchHistoryRepository
 import io.github.degipe.youtubewhitelist.core.data.repository.WhitelistRepository
 import io.github.degipe.youtubewhitelist.core.data.repository.YouTubeApiRepository
+import io.github.degipe.youtubewhitelist.core.data.repository.impl.BlocklistRepositoryImpl
 import io.github.degipe.youtubewhitelist.core.data.repository.impl.ChannelVideoCacheRepositoryImpl
 import io.github.degipe.youtubewhitelist.core.data.repository.impl.KidProfileRepositoryImpl
 import io.github.degipe.youtubewhitelist.core.data.repository.impl.WatchHistoryRepositoryImpl
@@ -51,6 +53,10 @@ abstract class DataModule {
     @Binds
     @Singleton
     abstract fun bindTimeLimitChecker(impl: TimeLimitCheckerImpl): TimeLimitChecker
+
+    @Binds
+    @Singleton
+    abstract fun bindBlocklistRepository(impl: BlocklistRepositoryImpl): BlocklistRepository
 
     companion object {
         @Provides
