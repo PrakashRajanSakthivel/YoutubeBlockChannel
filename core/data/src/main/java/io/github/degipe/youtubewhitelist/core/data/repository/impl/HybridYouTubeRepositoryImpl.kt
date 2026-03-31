@@ -103,6 +103,31 @@ class HybridYouTubeRepositoryImpl @Inject constructor(
             ?: AppResult.Error("Search failed")
     }
 
+    override suspend fun getVideoDurations(videoIds: List<String>): AppResult<Map<String, Long>> =
+        withContext(ioDispatcher) {
+            try {
+                val durations = mutableMapOf<String, Long>()
+                videoIds.chunked(50).forEach { batch ->
+                    val response = youTubeApiService.getVideos(
+                        part = "contentDetails",
+                        id = batch.joinToString(",")
+                    )
+                    if (response.isSuccessful) {
+                        response.body()?.items?.forEach { video ->
+                            video.contentDetails?.duration?.let { iso ->
+                                durations[video.id] = YouTubeApiRepositoryImpl.parseIsoDuration(iso)
+                            }
+                        }
+                    }
+                }
+                AppResult.Success(durations)
+            } catch (e: IOException) {
+                AppResult.Error("Network error", e)
+            } catch (e: Exception) {
+                AppResult.Error("Unexpected error", e)
+            }
+        }
+
     // --- oEmbed ---
 
     private suspend fun tryOEmbedVideo(videoId: String): AppResult<YouTubeMetadata.Video>? {

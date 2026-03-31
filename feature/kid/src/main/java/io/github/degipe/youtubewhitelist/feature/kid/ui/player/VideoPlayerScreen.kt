@@ -54,6 +54,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -69,6 +70,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import io.github.degipe.youtubewhitelist.core.data.model.PlaylistVideo
 import io.github.degipe.youtubewhitelist.core.data.model.WhitelistItem
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -167,37 +169,39 @@ fun VideoPlayerScreen(
                         )
                     }
 
-                    // YouTube Player WebView
-                    YouTubePlayer(
-                        youtubeId = uiState.youtubeId,
-                        shouldPause = uiState.isSleepTimerExpired || uiState.isTimeLimitReached,
-                        onVideoEnded = { viewModel.playNext() },
-                        onEmbedError = { viewModel.playNext() },
-                        onEnterFullscreen = { view, callback ->
-                            fullscreenView = view
-                            fullscreenCallback = callback
-                            activity?.let { act ->
-                                view.setBackgroundColor(android.graphics.Color.BLACK)
-                                (act.window.decorView as? FrameLayout)?.addView(
-                                    view,
-                                    FrameLayout.LayoutParams(
-                                        FrameLayout.LayoutParams.MATCH_PARENT,
-                                        FrameLayout.LayoutParams.MATCH_PARENT
+                    // YouTube Player WebView — key() forces full WebView recreation on video change
+                    key(uiState.youtubeId) {
+                        YouTubePlayer(
+                            youtubeId = uiState.youtubeId,
+                            shouldPause = uiState.isSleepTimerExpired || uiState.isTimeLimitReached,
+                            onVideoEnded = { viewModel.playNext() },
+                            onEmbedError = { viewModel.playNext() },
+                            onEnterFullscreen = { view, callback ->
+                                fullscreenView = view
+                                fullscreenCallback = callback
+                                activity?.let { act ->
+                                    view.setBackgroundColor(android.graphics.Color.BLACK)
+                                    (act.window.decorView as? FrameLayout)?.addView(
+                                        view,
+                                        FrameLayout.LayoutParams(
+                                            FrameLayout.LayoutParams.MATCH_PARENT,
+                                            FrameLayout.LayoutParams.MATCH_PARENT
+                                        )
                                     )
-                                )
-                                act.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-                                WindowCompat.setDecorFitsSystemWindows(act.window, false)
-                                WindowInsetsControllerCompat(act.window, act.window.decorView).apply {
-                                    hide(WindowInsetsCompat.Type.systemBars())
-                                    systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                                    act.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                                    WindowCompat.setDecorFitsSystemWindows(act.window, false)
+                                    WindowInsetsControllerCompat(act.window, act.window.decorView).apply {
+                                        hide(WindowInsetsCompat.Type.systemBars())
+                                        systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                                    }
                                 }
-                            }
-                        },
-                        onExitFullscreen = exitFullscreen,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(16f / 9f)
-                    )
+                            },
+                            onExitFullscreen = exitFullscreen,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(16f / 9f)
+                        )
+                    }
 
                     // Video info + controls
                     Column(modifier = Modifier.padding(16.dp)) {
@@ -246,7 +250,7 @@ fun VideoPlayerScreen(
                         }
                     }
 
-                    // Up next list
+                    // Up next from same channel
                     if (uiState.siblingVideos.size > 1) {
                         Text(
                             text = "Up Next",
@@ -255,7 +259,9 @@ fun VideoPlayerScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         LazyColumn(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
                             verticalArrangement = Arrangement.spacedBy(4.dp),
                             contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp)
                         ) {
@@ -267,6 +273,73 @@ fun VideoPlayerScreen(
                                     video = video,
                                     onClick = { viewModel.playVideoAt(index) }
                                 )
+                            }
+
+                            // Suggested videos from all channels
+                            if (uiState.suggestedVideos.isNotEmpty()) {
+                                item {
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Text(
+                                        text = "More Videos",
+                                        style = MaterialTheme.typography.titleSmall
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                }
+                                items(uiState.suggestedVideos, key = { "suggested-${it.videoId}" }) { video ->
+                                    SuggestedVideoCard(
+                                        video = video,
+                                        onClick = { viewModel.playSuggestedVideo(video) }
+                                    )
+                                }
+                            }
+
+                            if (uiState.isLoadingSuggestions) {
+                                item {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // No siblings — show suggested videos directly
+                        if (uiState.suggestedVideos.isNotEmpty() || uiState.isLoadingSuggestions) {
+                            Text(
+                                text = "More Videos",
+                                style = MaterialTheme.typography.titleSmall,
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            LazyColumn(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(4.dp),
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp)
+                            ) {
+                                items(uiState.suggestedVideos, key = { "suggested-${it.videoId}" }) { video ->
+                                    SuggestedVideoCard(
+                                        video = video,
+                                        onClick = { viewModel.playSuggestedVideo(video) }
+                                    )
+                                }
+                                if (uiState.isLoadingSuggestions) {
+                                    item {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(16.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -569,6 +642,47 @@ private fun UpNextCard(video: WhitelistItem, onClick: () -> Unit) {
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
             )
+        }
+    }
+}
+
+@Composable
+private fun SuggestedVideoCard(video: PlaylistVideo, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            AsyncImage(
+                model = video.thumbnailUrl,
+                contentDescription = video.title,
+                modifier = Modifier
+                    .width(120.dp)
+                    .aspectRatio(16f / 9f),
+                contentScale = ContentScale.Crop
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = video.title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = video.channelTitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }

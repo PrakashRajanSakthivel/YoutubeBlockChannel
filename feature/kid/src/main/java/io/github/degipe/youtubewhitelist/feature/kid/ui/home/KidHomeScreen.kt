@@ -17,10 +17,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Lock
@@ -45,6 +47,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import io.github.degipe.youtubewhitelist.core.data.model.PlaylistVideo
 import io.github.degipe.youtubewhitelist.core.data.model.WhitelistItem
 
 @Composable
@@ -218,159 +221,229 @@ private fun KidHomeContent(
     onPlaylistClick: (youtubeId: String, title: String, thumbnailUrl: String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
         modifier = modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(horizontal = 12.dp),
+        contentPadding = PaddingValues(bottom = 80.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        // Greeting + Search
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = if (uiState.profileName.isNotEmpty()) "Hi ${uiState.profileName}!" else "My Videos",
-                style = MaterialTheme.typography.headlineMedium
-            )
-            IconButton(onClick = onSearchClick) {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = "Search"
-                )
-            }
-        }
-
-        // Remaining time chip
-        uiState.remainingTimeFormatted?.let { remaining ->
-            Card(
-                modifier = Modifier.fillMaxWidth()
+        // Greeting + Search — full width
+        item(span = { GridItemSpan(2) }) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Time remaining: $remaining",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    textAlign = TextAlign.Center
+                    text = if (uiState.profileName.isNotEmpty()) "Hi ${uiState.profileName}!" else "My Videos",
+                    style = MaterialTheme.typography.headlineMedium
                 )
+                IconButton(onClick = onSearchClick) {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Search"
+                    )
+                }
             }
         }
 
-        // Channels section
+        // Remaining time chip — full width
+        uiState.remainingTimeFormatted?.let { remaining ->
+            item(span = { GridItemSpan(2) }) {
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "Time remaining: $remaining",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+
+        // Channels — horizontal scrollable row (compact) — full width
         if (uiState.channels.isNotEmpty()) {
-            Text(
-                text = "Channels",
-                style = MaterialTheme.typography.titleMedium
-            )
-            Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                uiState.channels.chunked(2).forEach { rowItems ->
-                    Row(
+            item(span = { GridItemSpan(2) }) {
+                Column {
+                    Text(
+                        text = "Channels",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                    LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.fillMaxWidth()
+                        contentPadding = PaddingValues(end = 8.dp)
                     ) {
-                        rowItems.forEach { channel ->
-                            ChannelCard(
+                        items(uiState.channels, key = { it.id }) { channel ->
+                            CompactChannelChip(
                                 channel = channel,
-                                onClick = { onChannelClick(channel.youtubeId, channel.title, channel.thumbnailUrl) },
-                                modifier = Modifier.weight(1f)
+                                onClick = { onChannelClick(channel.youtubeId, channel.title, channel.thumbnailUrl) }
                             )
-                        }
-                        // Fill empty space if odd number
-                        if (rowItems.size == 1) {
-                            Spacer(modifier = Modifier.weight(1f))
                         }
                     }
                 }
             }
         }
 
-        // Videos section
+        // Latest Videos from channels — 2-column grid
+        if (uiState.latestVideos.isNotEmpty() || uiState.isLoadingVideos) {
+            item(span = { GridItemSpan(2) }) {
+                Text(
+                    text = "Latest Videos",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+            }
+
+            if (uiState.isLoadingVideos && uiState.latestVideos.isEmpty()) {
+                item(span = { GridItemSpan(2) }) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(100.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+            }
+
+            items(uiState.latestVideos, key = { it.videoId }) { video ->
+                LatestVideoCard(
+                    video = video,
+                    onClick = { onVideoClick(video.videoId, video.title, video.channelTitle) }
+                )
+            }
+        }
+
+        // Individually whitelisted videos — full width row
         if (uiState.recentVideos.isNotEmpty()) {
-            Text(
-                text = "Videos",
-                style = MaterialTheme.typography.titleMedium
-            )
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(end = 16.dp)
-            ) {
-                items(uiState.recentVideos, key = { it.id }) { video ->
-                    VideoCard(
-                        video = video,
-                        onClick = { onVideoClick(video.youtubeId, video.title, video.channelTitle) }
+            item(span = { GridItemSpan(2) }) {
+                Column {
+                    Text(
+                        text = "Videos",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(vertical = 4.dp)
                     )
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(end = 16.dp)
+                    ) {
+                        items(uiState.recentVideos, key = { it.id }) { video ->
+                            WhitelistVideoCard(
+                                video = video,
+                                onClick = { onVideoClick(video.youtubeId, video.title, video.channelTitle) }
+                            )
+                        }
+                    }
                 }
             }
         }
 
-        // Playlists section
+        // Playlists — full width row
         if (uiState.playlists.isNotEmpty()) {
-            Text(
-                text = "Playlists",
-                style = MaterialTheme.typography.titleMedium
-            )
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(end = 16.dp)
-            ) {
-                items(uiState.playlists, key = { it.id }) { playlist ->
-                    VideoCard(
-                        video = playlist,
-                        onClick = { onPlaylistClick(playlist.youtubeId, playlist.title, playlist.thumbnailUrl) }
+            item(span = { GridItemSpan(2) }) {
+                Column {
+                    Text(
+                        text = "Playlists",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(vertical = 4.dp)
                     )
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(end = 16.dp)
+                    ) {
+                        items(uiState.playlists, key = { it.id }) { playlist ->
+                            WhitelistVideoCard(
+                                video = playlist,
+                                onClick = { onPlaylistClick(playlist.youtubeId, playlist.title, playlist.thumbnailUrl) }
+                            )
+                        }
+                    }
                 }
             }
         }
-
-        Spacer(modifier = Modifier.height(72.dp))
     }
 }
 
 @Composable
-private fun ChannelCard(
+private fun CompactChannelChip(
     channel: WhitelistItem,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .width(72.dp)
+            .clickable(onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        AsyncImage(
+            model = channel.thumbnailUrl,
+            contentDescription = channel.title,
+            modifier = Modifier
+                .size(56.dp)
+                .clip(CircleShape),
+            contentScale = ContentScale.Crop
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = channel.title,
+            style = MaterialTheme.typography.labelSmall,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+private fun LatestVideoCard(
+    video: PlaylistVideo,
+    onClick: () -> Unit
 ) {
     Card(
-        modifier = modifier
+        modifier = Modifier
+            .fillMaxWidth()
             .clickable(onClick = onClick)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
+        Column {
             AsyncImage(
-                model = channel.thumbnailUrl,
-                contentDescription = channel.title,
+                model = video.thumbnailUrl,
+                contentDescription = video.title,
                 modifier = Modifier
-                    .size(80.dp)
-                    .clip(CircleShape),
+                    .fillMaxWidth()
+                    .aspectRatio(16f / 9f),
                 contentScale = ContentScale.Crop
             )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = channel.title,
-                style = MaterialTheme.typography.labelLarge,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center
-            )
+            Column(modifier = Modifier.padding(8.dp)) {
+                Text(
+                    text = video.title,
+                    style = MaterialTheme.typography.labelMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = video.channelTitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun VideoCard(
+private fun WhitelistVideoCard(
     video: WhitelistItem,
     onClick: () -> Unit
 ) {
