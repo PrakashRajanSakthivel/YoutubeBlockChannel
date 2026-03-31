@@ -36,8 +36,8 @@ A free, open-source Android app that lets parents whitelist specific YouTube cha
 
 1. Clone and build:
    ```bash
-   git clone https://github.com/degipe/YouTubeWhitelist.git
-   cd YouTubeWhitelist
+   git clone https://github.com/PrakashRajanSakthivel/YoutubeBlockChannel.git
+   cd YoutubeBlockChannel
    ./gradlew assembleDebug
    ```
 2. Install the APK and launch it — you'll be prompted to enter your **OAuth Client ID** and **Client Secret** on first run.
