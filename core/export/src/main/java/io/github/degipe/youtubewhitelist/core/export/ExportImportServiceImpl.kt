@@ -2,10 +2,13 @@ package io.github.degipe.youtubewhitelist.core.export
 
 import io.github.degipe.youtubewhitelist.core.common.result.AppResult
 import io.github.degipe.youtubewhitelist.core.common.model.WhitelistItemType
+import io.github.degipe.youtubewhitelist.core.database.dao.BlockedChannelDao
 import io.github.degipe.youtubewhitelist.core.database.dao.KidProfileDao
 import io.github.degipe.youtubewhitelist.core.database.dao.WhitelistItemDao
+import io.github.degipe.youtubewhitelist.core.database.entity.BlockedChannelEntity
 import io.github.degipe.youtubewhitelist.core.database.entity.KidProfileEntity
 import io.github.degipe.youtubewhitelist.core.database.entity.WhitelistItemEntity
+import io.github.degipe.youtubewhitelist.core.export.model.ExportBlockedChannel
 import io.github.degipe.youtubewhitelist.core.export.model.ExportData
 import io.github.degipe.youtubewhitelist.core.export.model.ExportProfile
 import io.github.degipe.youtubewhitelist.core.export.model.ExportWhitelistItem
@@ -18,7 +21,8 @@ import javax.inject.Singleton
 @Singleton
 class ExportImportServiceImpl @Inject constructor(
     private val kidProfileDao: KidProfileDao,
-    private val whitelistItemDao: WhitelistItemDao
+    private val whitelistItemDao: WhitelistItemDao,
+    private val blockedChannelDao: BlockedChannelDao
 ) : ExportImportService {
 
     private val json = Json { prettyPrint = true }
@@ -28,6 +32,7 @@ class ExportImportServiceImpl @Inject constructor(
             val profiles = kidProfileDao.getProfilesByParent(parentAccountId).first()
             val exportProfiles = profiles.map { profile ->
                 val items = whitelistItemDao.getItemsByProfile(profile.id).first()
+                val blocked = blockedChannelDao.getAllByProfile(profile.id).first()
                 ExportProfile(
                     name = profile.name,
                     avatarUrl = profile.avatarUrl,
@@ -40,6 +45,13 @@ class ExportImportServiceImpl @Inject constructor(
                             title = item.title,
                             thumbnailUrl = item.thumbnailUrl,
                             channelTitle = item.channelTitle
+                        )
+                    },
+                    blockedChannels = blocked.map { channel ->
+                        ExportBlockedChannel(
+                            channelId = channel.channelId,
+                            channelTitle = channel.channelTitle,
+                            channelThumbnailUrl = channel.channelThumbnailUrl
                         )
                     }
                 )
@@ -107,6 +119,21 @@ class ExportImportServiceImpl @Inject constructor(
                     )
                     whitelistItemDao.insert(itemEntity)
                     totalItemsImported++
+                }
+
+                for (exportBlocked in exportProfile.blockedChannels) {
+                    if (strategy == ImportStrategy.MERGE) {
+                        val alreadyBlocked = blockedChannelDao.isBlocked(newProfileId, exportBlocked.channelId)
+                        if (alreadyBlocked) continue
+                    }
+                    blockedChannelDao.insert(
+                        BlockedChannelEntity(
+                            kidProfileId = newProfileId,
+                            channelId = exportBlocked.channelId,
+                            channelTitle = exportBlocked.channelTitle,
+                            channelThumbnailUrl = exportBlocked.channelThumbnailUrl
+                        )
+                    )
                 }
             }
 

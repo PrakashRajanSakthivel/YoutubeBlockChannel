@@ -7,6 +7,8 @@ import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.degipe.youtubewhitelist.core.data.model.WhitelistItem
+import io.github.degipe.youtubewhitelist.core.common.model.WhitelistItemType
+import io.github.degipe.youtubewhitelist.core.data.repository.BlocklistRepository
 import io.github.degipe.youtubewhitelist.core.data.repository.WhitelistRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -14,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -30,6 +33,7 @@ data class KidSearchUiState(
 @HiltViewModel(assistedFactory = KidSearchViewModel.Factory::class)
 class KidSearchViewModel @AssistedInject constructor(
     private val whitelistRepository: WhitelistRepository,
+    private val blocklistRepository: BlocklistRepository,
     @Assisted private val profileId: String
 ) : ViewModel() {
 
@@ -48,14 +52,19 @@ class KidSearchViewModel @AssistedInject constructor(
             if (query.isBlank()) {
                 flowOf(KidSearchUiState(query = query))
             } else {
-                whitelistRepository.searchItems(profileId, query)
-                    .map { results ->
-                        KidSearchUiState(
-                            query = query,
-                            results = results,
-                            isSearching = false
-                        )
-                    }
+                combine(
+                    whitelistRepository.searchItems(profileId, query),
+                    blocklistRepository.getBlockedChannelIdsFlow(profileId)
+                ) { results, blockedIds ->
+                    val blockedSet = blockedIds.toSet()
+                    KidSearchUiState(
+                        query = query,
+                        results = results.filter { item ->
+                            item.type != WhitelistItemType.CHANNEL || item.youtubeId !in blockedSet
+                        },
+                        isSearching = false
+                    )
+                }
             }
         }
         .stateIn(

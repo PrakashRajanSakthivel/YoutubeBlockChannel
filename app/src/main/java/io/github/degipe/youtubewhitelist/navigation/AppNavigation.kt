@@ -36,6 +36,8 @@ import io.github.degipe.youtubewhitelist.feature.parent.ui.stats.WatchStatsScree
 import io.github.degipe.youtubewhitelist.feature.parent.ui.stats.WatchStatsViewModel
 import io.github.degipe.youtubewhitelist.feature.parent.ui.whitelist.WhitelistManagerScreen
 import io.github.degipe.youtubewhitelist.feature.parent.ui.about.AboutScreen
+import io.github.degipe.youtubewhitelist.feature.parent.ui.blocklist.BlockedChannelsScreen
+import io.github.degipe.youtubewhitelist.feature.parent.ui.blocklist.BlockedChannelsViewModel
 import io.github.degipe.youtubewhitelist.feature.parent.ui.whitelist.WhitelistManagerViewModel
 import io.github.degipe.youtubewhitelist.ui.screen.profile.ProfileSelectorScreen
 import io.github.degipe.youtubewhitelist.ui.screen.profile.ProfileSelectorViewModel
@@ -303,6 +305,9 @@ fun AppNavigation(
                 onOpenWhitelistManager = { profileId ->
                     navController.navigate(Route.WhitelistManager(profileId))
                 },
+                onOpenBlocklist = { profileId ->
+                    navController.navigate(Route.BlockedChannels(profileId))
+                },
                 onOpenBrowser = { profileId ->
                     navController.navigate(Route.WebViewBrowser(profileId))
                 },
@@ -342,6 +347,20 @@ fun AppNavigation(
                     factory.create(route.profileId)
                 }
             WhitelistManagerScreen(
+                viewModel = viewModel,
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable<Route.BlockedChannels> { backStackEntry ->
+            val route = backStackEntry.toRoute<Route.BlockedChannels>()
+            val viewModel: BlockedChannelsViewModel =
+                hiltViewModel<BlockedChannelsViewModel, BlockedChannelsViewModel.Factory> { factory ->
+                    factory.create(route.profileId)
+                }
+            BlockedChannelsScreen(
                 viewModel = viewModel,
                 onNavigateBack = {
                     navController.popBackStack()
