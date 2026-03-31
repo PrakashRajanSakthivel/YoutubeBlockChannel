@@ -22,6 +22,8 @@ A safe YouTube experience for kids. Parents whitelist channels, videos, and play
    - [Adding Content to the Whitelist](#43-adding-content-to-the-whitelist)
    - [Managing the Whitelist](#44-managing-the-whitelist)
    - [Browsing YouTube](#45-browsing-youtube)
+   - [Channel Blocklist](#46-channel-blocklist)
+   - [API Credentials](#47-api-credentials)
 5. [Profiles](#5-profiles)
    - [Creating a Profile](#51-creating-a-profile)
    - [Editing a Profile](#52-editing-a-profile)
@@ -53,6 +55,7 @@ A safe YouTube experience for kids. Parents whitelist channels, videos, and play
 ### Key Features
 
 - **Whitelist-based filtering** — Only approved content is visible to kids
+- **Channel blocklist** — Block specific channels from ever appearing in Kid Mode
 - **Multiple kid profiles** — Each child gets their own personalized whitelist
 - **PIN-protected parent mode** — Kids cannot access parent controls
 - **Daily time limits** — Set how long each child can watch per day
@@ -60,6 +63,10 @@ A safe YouTube experience for kids. Parents whitelist channels, videos, and play
 - **Watch statistics** — Track how much time each child spends watching
 - **Kiosk mode** — Locks the device to the app (kids can't switch to other apps)
 - **Backup & restore** — Export your profiles and whitelists to a file
+- **Android TV support** — Full D-pad/remote navigation, fullscreen player with overlay suggestions
+- **Voice search** — Speak to find content (works with TV remote mic buttons)
+- **Suggested videos** — Related whitelisted videos shown after each video
+- **Shorts filter** — Videos shorter than 60 seconds are automatically hidden
 - **No ads, no tracking** — Completely free and open source
 
 ### Requirements
@@ -81,7 +88,7 @@ Search for "YouTubeWhitelist" on the Play Store and install.
 Add the repository or search for "YouTubeWhitelist" in the F-Droid client.
 
 #### From GitHub (Sideloading)
-1. Download the latest APK from [GitHub Releases](https://github.com/degipe/YouTubeWhitelist/releases)
+1. Download the latest APK from [GitHub Releases](https://github.com/PrakashRajanSakthivel/YoutubeBlockChannel/releases)
 2. On your Android device, go to **Settings > Security > Install unknown apps**
 3. Allow your browser or file manager to install apps
 4. Open the downloaded APK and tap **Install**
@@ -90,7 +97,19 @@ Add the repository or search for "YouTubeWhitelist" in the F-Droid client.
 
 When you first open the app, you'll go through a short setup process:
 
-#### Step 1: Sign In with Google
+#### Step 1: Enter API Credentials
+
+On first launch, the app will show the **API Credentials** screen:
+
+- Enter your **Google OAuth Client ID** and **Client Secret** (required for sign-in)
+- Optionally enter a **YouTube Data API Key** (for fetching video metadata)
+- Tap **"Save Credentials"**
+
+> **Don't have credentials yet?** See [docs/SETUP_GUIDE.md](SETUP_GUIDE.md) for a step-by-step walkthrough of creating a Google Cloud project and getting your credentials. This takes about 10 minutes.
+
+> **Note:** Credentials are stored securely on your device using AES-256 encryption. They are never transmitted anywhere.
+
+#### Step 2: Sign In with Google
 
 - Tap **"Sign In"**
 - A browser tab (Chrome Custom Tab) will open with the Google sign-in page
@@ -100,7 +119,7 @@ When you first open the app, you'll go through a short setup process:
 
 > **Note:** This sign-in is only used to create your parent account. The app does not access your Google data beyond basic account identification.
 
-#### Step 2: Create Your PIN
+#### Step 3: Create Your PIN
 
 - Enter a **4-digit PIN** that you'll use to access Parent Mode
 - Confirm the PIN by entering it again
@@ -108,7 +127,7 @@ When you first open the app, you'll go through a short setup process:
 
 > **Tip:** Choose a PIN that your child won't easily guess. Avoid obvious combinations like 1234 or your child's birth year.
 
-#### Step 3: Create Your First Kid Profile
+#### Step 4: Create Your First Kid Profile
 
 - Enter your child's name
 - Tap **"Create"**
@@ -124,23 +143,25 @@ Kid Mode is the primary interface your children will use. It shows only whitelis
 
 ### 3.1 Home Screen
 
-The Kid Home screen is the first thing your child sees when they open the app. It displays:
+The Kid Home screen is the first thing your child sees when they open the app. It uses an adaptive grid that scales from 2 columns on phones to 5 columns on large TVs.
 
-- **Greeting** — "Hi [Name]!" with the child's profile name
-- **Channels** — A grid of whitelisted channels (shown as circular thumbnails with titles)
-- **Videos** — A horizontal scrolling row of whitelisted videos
-- **Playlists** — A horizontal scrolling row of whitelisted playlists
+- **Greeting row** — "Hi [Name]!" with a search icon (and mic icon for voice search)
+- **Channel chips** — Horizontal scrollable row of circular channel thumbnails; tap one to filter the video grid to that channel
+- **Video grid** — All whitelisted channel videos (Shorts under 60 seconds are automatically hidden)
+- **Remaining time** — If a daily limit is set, a badge shows time left
 
 If no content has been whitelisted yet, the screen shows a friendly message: *"No whitelisted content yet. Ask a parent to add videos!"*
 
 **Navigation from Home:**
-- Tap a **channel** to see all videos in that channel
-- Tap a **video** to start watching it
-- Tap a **playlist** to see all videos in that playlist
+- Tap a **channel chip** to filter the video feed to that channel
+- Tap a **video card** to start watching it
 - Tap the **search icon** (magnifying glass) to search within whitelisted content
-- Tap the **lock icon** (top right) to enter Parent Mode (requires PIN)
+- Tap the **mic icon** to search by voice (on devices/TVs with a microphone)
+- Tap the **lock icon** (top right) to enter Parent Mode (requires PIN, hidden on Android TV)
 
 > **Note:** The Back button is disabled in Kid Mode to prevent children from accidentally exiting the app.
+
+> **Android TV:** Full D-pad/remote navigation is supported. Use directional buttons to move between items, OK/Select to open, and the mic button on your remote for voice search.
 
 ### 3.2 Watching Videos
 
@@ -151,7 +172,9 @@ When your child taps on a video, the **Video Player** opens:
 - **Navigation controls** appear below the video:
   - **Previous** / **Next** buttons to skip between videos
   - Current position indicator (e.g., "3 / 10")
-- **Up Next** list shows remaining videos from the same context (channel, playlist, or search results)
+- **Suggested Videos** — A panel of related whitelisted videos appears after the current video. The suggestions are drawn from a pool of all whitelisted content and recycle automatically when the pool is exhausted.
+
+> **Android TV:** The player runs fullscreen. Press **D-pad Down** to reveal an animated overlay showing a 4-column grid of suggested videos. Press **D-pad Up** or **Back** to hide it.
 
 **Safety features in the Video Player:**
 - All external links are blocked — tapping "Watch on YouTube" or any other link does nothing
@@ -184,14 +207,17 @@ Tapping a playlist card on the Home screen opens the **Playlist Detail** screen:
 Tap the **search icon** on the Home screen to open the **Search** screen:
 
 - Type a search query in the text field at the top
+- Tap the **mic icon** in the search bar (or press the mic button on your TV remote) to search by voice
 - Results appear in real-time as you type
 - Search finds matches in:
   - Video titles
   - Channel titles
   - Playlist titles
-  - Videos from whitelisted channels that match your query (via YouTube API)
+  - Cached videos from whitelisted channels (0 extra API quota)
 
 Tap any search result to navigate to that video, channel, or playlist.
+
+> **Voice Search:** Speak your query and the recognized text is automatically entered into the search field. Works on Android TV remotes with a built-in microphone, as well as phones and tablets.
 
 ---
 
@@ -219,11 +245,13 @@ The Parent Dashboard is your control center. At the top, you'll see **profile ch
 |--------|-------------|
 | **Manage Whitelist** | View, add, and remove whitelisted content |
 | **Browse YouTube** | Browse YouTube freely and add content with one tap |
+| **Channel Blocklist** | Block specific channels from appearing in Kid Mode |
 | **Sleep Mode** | Set a countdown timer for bedtime |
 | **Edit Profile** | Change the child's name, avatar, or daily time limit |
 | **Watch Stats** | View how much time the child has been watching |
 | **Export / Import** | Backup or restore profiles and whitelists |
 | **Create Profile** | Add a new kid profile |
+| **API Credentials** | Update your Google OAuth Client ID, Secret, and API Key |
 | **Change PIN** | Update your parent access PIN |
 | **About** | App info, license, and support links |
 
@@ -273,6 +301,34 @@ Each item in the list shows:
 - Title
 - Channel name (for videos and playlists)
 - Content type label
+
+### 4.6 Channel Blocklist
+
+The Channel Blocklist lets you prevent specific channels from ever appearing in Kid Mode — even if a video from that channel somehow ends up in a whitelisted playlist.
+
+**To block a channel:**
+1. Go to **Parent Dashboard > Channel Blocklist**
+2. Tap the **+ button**
+3. Paste the YouTube channel URL (any format: `@handle`, `/channel/ID`, `/c/name`)
+4. Tap **"Block"** — the channel is blocked immediately
+
+**To unblock a channel:**
+- In the Channel Blocklist screen, tap the **delete icon** on any blocked channel
+
+> **Note:** Blocking a channel does not remove whitelisted videos from that channel — it only hides them in Kid Mode. You can unblock at any time to restore visibility.
+
+### 4.7 API Credentials
+
+Your Google API credentials can be updated at any time without reinstalling the app.
+
+1. Go to **Parent Dashboard > API Credentials**
+2. Enter your **OAuth Client ID** and **Client Secret** (required)
+3. Optionally enter a **YouTube Data API Key**
+4. Tap **"Save Credentials"**
+
+Credentials are stored securely on your device using AES-256 encryption and are never sent to any external server.
+
+> **Need to create credentials?** See [docs/SETUP_GUIDE.md](SETUP_GUIDE.md) for step-by-step instructions.
 
 ---
 
@@ -490,7 +546,7 @@ Go to **Parent Dashboard > About** to see:
 - **App version** (currently 1.0.0)
 - **Description** of the app's purpose
 - **License** — GNU General Public License v3.0 (GPLv3)
-- **Source code** link — [github.com/degipe/YouTubeWhitelist](https://github.com/degipe/YouTubeWhitelist)
+- **Source code** link — [github.com/PrakashRajanSakthivel/YoutubeBlockChannel](https://github.com/PrakashRajanSakthivel/YoutubeBlockChannel)
 - **Support development** — Ko-fi donation link
 
 ---
@@ -540,12 +596,12 @@ A: No. The embedded player blocks all external navigation. Clicking any link (in
 A: Some content creators disable embedding. If a video can't be embedded, it's automatically skipped and the next video plays.
 
 **Q: Can my child search for anything on YouTube?**
-A: No. The search feature only finds results within the whitelisted content and whitelisted channels. It never searches all of YouTube.
+A: No. The search feature only finds results within whitelisted content and cached videos from whitelisted channels — it never searches all of YouTube. Voice search works the same way: spoken queries are entered into this local search, not sent to YouTube.
 
 ### Technical
 
 **Q: Why do I need to sign in with Google?**
-A: The Google sign-in creates your parent account. The app needs a YouTube Data API key (provided by the developer) to fetch video metadata, and an account to identify you as the parent.
+A: The Google sign-in creates your parent account. You provide your own YouTube Data API key and OAuth credentials (entered on first launch or via Parent Dashboard > API Credentials), so no shared credentials are baked into the app.
 
 **Q: Why does the app ask me to sign in twice (once in the app, once in Browse YouTube)?**
 A: The initial sign-in uses Chrome Custom Tabs (for security), while Browse YouTube uses an in-app WebView. These have separate cookie stores, so your YouTube session in Browse YouTube is independent. Both sessions persist between app restarts.
@@ -562,7 +618,7 @@ A: Yes! If you sign into your YouTube Premium account within Browse YouTube, pre
 - Ensure you have a stable internet connection
 - Make sure you're using a Google account (not a non-Google email)
 - Try clearing the app's cache and trying again
-- If the problem persists, the OAuth configuration may need updating — check the [GitHub issues](https://github.com/degipe/YouTubeWhitelist/issues)
+- If the problem persists, your OAuth credentials may need updating — go to **Parent Dashboard > API Credentials** to re-enter them, or check [GitHub Issues](https://github.com/PrakashRajanSakthivel/YoutubeBlockChannel/issues)
 
 ### Videos not playing
 
@@ -584,7 +640,7 @@ This is by design. The overlay appears when the daily time limit is reached. To 
 2. Clear the cache: **Settings > Apps > YouTubeWhitelist > Clear Cache**
 3. Restart the app
 4. If the problem persists, try **Clear Data** (this resets the app — make sure you have a backup first!)
-5. Report the issue at [GitHub Issues](https://github.com/degipe/YouTubeWhitelist/issues)
+5. Report the issue at [GitHub Issues](https://github.com/PrakashRajanSakthivel/YoutubeBlockChannel/issues)
 
 ### Kiosk mode not working
 
@@ -625,13 +681,12 @@ No data is sent to any other server. The app has no analytics, no crash reportin
 | Permission | Purpose |
 |------------|---------|
 | `INTERNET` | YouTube API calls and video playback |
-| `ACCESS_NETWORK_STATE` | Check if internet is available before making API calls |
-| `USE_BIOMETRIC` | Optional biometric authentication (future feature) |
+| `ACCESS_NETWORK_STATE` | Check if internet is available before making API calls || `RECORD_AUDIO` | Voice search via the microphone (TV remote mic or device mic) || `USE_BIOMETRIC` | Optional biometric authentication (future feature) |
 
 ### Open Source
 
-The complete source code is available at [github.com/degipe/YouTubeWhitelist](https://github.com/degipe/YouTubeWhitelist) under the GPLv3 license. You can audit the code, build it yourself, or contribute improvements.
+The complete source code is available at [github.com/PrakashRajanSakthivel/YoutubeBlockChannel](https://github.com/PrakashRajanSakthivel/YoutubeBlockChannel) under the GPLv3 license. You can audit the code, build it yourself, or contribute improvements.
 
 ---
 
-*YouTubeWhitelist v1.0.0 — Made with love for families.*
+*YouTubeWhitelist v1.2.0 — Made with love for families.*
