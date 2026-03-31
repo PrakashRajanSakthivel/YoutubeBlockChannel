@@ -3,8 +3,10 @@ package io.github.degipe.youtubewhitelist.navigation
 import android.app.Activity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -39,6 +41,8 @@ import io.github.degipe.youtubewhitelist.feature.parent.ui.about.AboutScreen
 import io.github.degipe.youtubewhitelist.feature.parent.ui.blocklist.BlockedChannelsScreen
 import io.github.degipe.youtubewhitelist.feature.parent.ui.blocklist.BlockedChannelsViewModel
 import io.github.degipe.youtubewhitelist.feature.parent.ui.whitelist.WhitelistManagerViewModel
+import io.github.degipe.youtubewhitelist.ui.screen.credentials.CredentialSettingsScreen
+import io.github.degipe.youtubewhitelist.ui.screen.credentials.CredentialSettingsViewModel
 import io.github.degipe.youtubewhitelist.ui.screen.profile.ProfileSelectorScreen
 import io.github.degipe.youtubewhitelist.ui.screen.profile.ProfileSelectorViewModel
 import io.github.degipe.youtubewhitelist.ui.screen.auth.SignInScreen
@@ -78,13 +82,27 @@ fun AppNavigation(
         }
 
         composable<Route.SignIn> {
-            SignInScreen(
-                onSignInSuccess = {
-                    navController.navigate(Route.PinSetup) {
-                        popUpTo<Route.SignIn> { inclusive = true }
+            val credentialStore = hiltViewModel<CredentialSettingsViewModel>()
+            val credState by credentialStore.uiState.collectAsStateWithLifecycle()
+
+            // Auto-redirect to credential setup if no credentials configured
+            if (!credState.hasExistingCredentials && io.github.degipe.youtubewhitelist.BuildConfig.GOOGLE_CLIENT_ID.isEmpty()) {
+                CredentialSettingsScreen(
+                    viewModel = credentialStore,
+                    onNavigateBack = { /* no back on first setup */ },
+                    onCredentialsSaved = {
+                        // Stay on same screen — recomposition will show SignIn
                     }
-                }
-            )
+                )
+            } else {
+                SignInScreen(
+                    onSignInSuccess = {
+                        navController.navigate(Route.PinSetup) {
+                            popUpTo<Route.SignIn> { inclusive = true }
+                        }
+                    }
+                )
+            }
         }
 
         composable<Route.PinSetup> {
@@ -328,6 +346,9 @@ fun AppNavigation(
                 },
                 onAbout = {
                     navController.navigate(Route.About)
+                },
+                onCredentialSettings = {
+                    navController.navigate(Route.CredentialSettings)
                 }
             )
         }
@@ -335,6 +356,19 @@ fun AppNavigation(
         composable<Route.About> {
             AboutScreen(
                 onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable<Route.CredentialSettings> {
+            val viewModel: CredentialSettingsViewModel = hiltViewModel()
+            CredentialSettingsScreen(
+                viewModel = viewModel,
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onCredentialsSaved = {
                     navController.popBackStack()
                 }
             )

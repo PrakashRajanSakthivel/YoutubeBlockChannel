@@ -3,6 +3,9 @@ package io.github.degipe.youtubewhitelist.feature.kid.ui.player
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.pm.ActivityInfo
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import android.graphics.Bitmap
 import android.os.Handler
 import android.os.Looper
@@ -18,13 +21,17 @@ import android.widget.FrameLayout
 import androidx.activity.compose.BackHandler
 import androidx.annotation.Keep
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -32,7 +39,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.items as gridItems
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bedtime
@@ -59,7 +70,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -70,6 +90,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import io.github.degipe.youtubewhitelist.core.common.util.TvDetector
 import io.github.degipe.youtubewhitelist.core.data.model.PlaylistVideo
 import io.github.degipe.youtubewhitelist.core.data.model.WhitelistItem
 
@@ -117,6 +138,19 @@ fun VideoPlayerScreen(
         if (shouldBlock && fullscreenView != null) {
             exitFullscreen()
         }
+    }
+
+    // TV: fullscreen player with D-pad overlay
+    val context = LocalContext.current
+    val isTV = remember { TvDetector.isTV(context) }
+    if (isTV) {
+        TvVideoPlayerContent(
+            uiState = uiState,
+            viewModel = viewModel,
+            onNavigateBack = onNavigateBack,
+            onParentAccess = onParentAccess
+        )
+        return
     }
 
     Scaffold(
@@ -615,10 +649,24 @@ private fun YouTubePlayer(
 
 @Composable
 private fun UpNextCard(video: WhitelistItem, onClick: () -> Unit) {
+    var isFocused by remember { mutableStateOf(false) }
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .then(
+                if (isFocused) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp))
+                else Modifier
+            )
+            .onFocusChanged { isFocused = it.isFocused }
+            .focusable()
             .clickable(onClick = onClick)
+            .onKeyEvent { event ->
+                if (event.type == KeyEventType.KeyUp &&
+                    (event.key == Key.DirectionCenter || event.key == Key.Enter)
+                ) {
+                    onClick(); true
+                } else false
+            }
     ) {
         Row(
             modifier = Modifier
@@ -648,10 +696,24 @@ private fun UpNextCard(video: WhitelistItem, onClick: () -> Unit) {
 
 @Composable
 private fun SuggestedVideoCard(video: PlaylistVideo, onClick: () -> Unit) {
+    var isFocused by remember { mutableStateOf(false) }
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .then(
+                if (isFocused) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp))
+                else Modifier
+            )
+            .onFocusChanged { isFocused = it.isFocused }
+            .focusable()
             .clickable(onClick = onClick)
+            .onKeyEvent { event ->
+                if (event.type == KeyEventType.KeyUp &&
+                    (event.key == Key.DirectionCenter || event.key == Key.Enter)
+                ) {
+                    onClick(); true
+                } else false
+            }
     ) {
         Row(
             modifier = Modifier
@@ -682,6 +744,297 @@ private fun SuggestedVideoCard(video: PlaylistVideo, onClick: () -> Unit) {
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TvVideoPlayerContent(
+    uiState: VideoPlayerUiState,
+    viewModel: VideoPlayerViewModel,
+    onNavigateBack: () -> Unit,
+    onParentAccess: () -> Unit
+) {
+    var showOverlay by remember { mutableStateOf(false) }
+    val overlayFocusRequester = remember { FocusRequester() }
+
+    BackHandler {
+        if (showOverlay) {
+            showOverlay = false
+        } else {
+            onNavigateBack()
+        }
+    }
+
+    // Immersive mode on TV
+    val activity = LocalContext.current as? Activity
+    DisposableEffect(Unit) {
+        activity?.let { act ->
+            WindowCompat.setDecorFitsSystemWindows(act.window, false)
+            WindowInsetsControllerCompat(act.window, act.window.decorView).apply {
+                hide(WindowInsetsCompat.Type.systemBars())
+                systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            }
+        }
+        onDispose {
+            activity?.let { act ->
+                WindowCompat.setDecorFitsSystemWindows(act.window, true)
+                WindowInsetsControllerCompat(act.window, act.window.decorView).show(
+                    WindowInsetsCompat.Type.systemBars()
+                )
+            }
+        }
+    }
+
+    // Request focus on overlay grid when it appears
+    LaunchedEffect(showOverlay) {
+        if (showOverlay) {
+            try { overlayFocusRequester.requestFocus() } catch (_: Exception) {}
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .onPreviewKeyEvent { event ->
+                if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionDown && !showOverlay) {
+                    showOverlay = true
+                    true
+                } else false
+            }
+    ) {
+        // Fullscreen YouTube player
+        if (!uiState.isLoading) {
+            key(uiState.youtubeId) {
+                YouTubePlayer(
+                    youtubeId = uiState.youtubeId,
+                    shouldPause = uiState.isSleepTimerExpired || uiState.isTimeLimitReached,
+                    onVideoEnded = { viewModel.playNext() },
+                    onEmbedError = { viewModel.playNext() },
+                    onEnterFullscreen = { _, _ -> },
+                    onExitFullscreen = { },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        } else {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        }
+
+        // Remaining time badge at top
+        uiState.remainingTimeFormatted?.let { remaining ->
+            Text(
+                text = "Time remaining: $remaining",
+                style = MaterialTheme.typography.labelMedium,
+                color = Color.White.copy(alpha = 0.8f),
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 16.dp)
+                    .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                    .padding(horizontal = 12.dp, vertical = 4.dp)
+            )
+        }
+
+        // Suggestions overlay at bottom (D-pad Down to show, Back to hide)
+        AnimatedVisibility(
+            visible = showOverlay,
+            enter = slideInVertically(initialOffsetY = { it }),
+            exit = slideOutVertically(targetOffsetY = { it }),
+            modifier = Modifier.align(Alignment.BottomCenter)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.45f)
+                    .background(Color.Black.copy(alpha = 0.85f))
+                    .padding(16.dp)
+            ) {
+                Column {
+                    Text(
+                        text = uiState.videoTitle,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+
+                    val filteredSiblings = uiState.siblingVideos
+                        .mapIndexed { index, item -> index to item }
+                        .filterNot { it.second.youtubeId == uiState.youtubeId }
+
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(4),
+                        contentPadding = PaddingValues(bottom = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .focusRequester(overlayFocusRequester)
+                    ) {
+                        // Sibling videos from same channel
+                        gridItems(filteredSiblings, key = { "sibling-${it.second.id}" }) { (index, video) ->
+                            TvSuggestionCard(
+                                title = video.title,
+                                thumbnailUrl = video.thumbnailUrl,
+                                channelTitle = "",
+                                onClick = {
+                                    showOverlay = false
+                                    viewModel.playVideoAt(index)
+                                }
+                            )
+                        }
+                        // Suggested videos from all channels
+                        gridItems(uiState.suggestedVideos, key = { "suggested-${it.videoId}" }) { video ->
+                            TvSuggestionCard(
+                                title = video.title,
+                                thumbnailUrl = video.thumbnailUrl,
+                                channelTitle = video.channelTitle,
+                                onClick = {
+                                    showOverlay = false
+                                    viewModel.playSuggestedVideo(video)
+                                }
+                            )
+                        }
+                        if (uiState.isLoadingSuggestions) {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        color = Color.White
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Time's Up overlay
+        if (uiState.isTimeLimitReached) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        text = "Time's Up!",
+                        style = MaterialTheme.typography.headlineLarge,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                    Text(
+                        text = "Your daily screen time is over.\nAsk a parent to continue.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        // Good Night overlay (sleep timer expired)
+        if (uiState.isSleepTimerExpired) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFF0A0A1A).copy(alpha = 0.98f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Bedtime,
+                        contentDescription = null,
+                        modifier = Modifier.size(80.dp),
+                        tint = Color(0xFF7B68EE)
+                    )
+                    Text(
+                        text = "Good Night!",
+                        style = MaterialTheme.typography.headlineLarge,
+                        color = Color(0xFFB0B0D0)
+                    )
+                    Text(
+                        text = "Time to sleep.\nSweet dreams!",
+                        style = MaterialTheme.typography.bodyLarge,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        color = Color(0xFFB0B0D0).copy(alpha = 0.7f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TvSuggestionCard(
+    title: String,
+    thumbnailUrl: String?,
+    channelTitle: String,
+    onClick: () -> Unit
+) {
+    var isFocused by remember { mutableStateOf(false) }
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(
+                if (isFocused) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp))
+                else Modifier
+            )
+            .onFocusChanged { isFocused = it.isFocused }
+            .focusable()
+            .clickable(onClick = onClick)
+            .onKeyEvent { event ->
+                if (event.type == KeyEventType.KeyUp &&
+                    (event.key == Key.DirectionCenter || event.key == Key.Enter)
+                ) {
+                    onClick(); true
+                } else false
+            }
+    ) {
+        Column {
+            AsyncImage(
+                model = thumbnailUrl,
+                contentDescription = title,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(16f / 9f),
+                contentScale = ContentScale.Crop
+            )
+            Column(modifier = Modifier.padding(8.dp)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (channelTitle.isNotEmpty()) {
+                    Text(
+                        text = channelTitle,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
         }
     }

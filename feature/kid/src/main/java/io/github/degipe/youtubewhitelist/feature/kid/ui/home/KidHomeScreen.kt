@@ -2,9 +2,12 @@ package io.github.degipe.youtubewhitelist.feature.kid.ui.home
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -23,6 +26,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Lock
@@ -37,16 +41,28 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import io.github.degipe.youtubewhitelist.core.common.util.TvDetector
 import io.github.degipe.youtubewhitelist.core.data.model.PlaylistVideo
 import io.github.degipe.youtubewhitelist.core.data.model.WhitelistItem
 
@@ -60,20 +76,25 @@ fun KidHomeScreen(
     onPlaylistClick: (youtubeId: String, title: String, thumbnailUrl: String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val isTV = remember { TvDetector.isTV(context) }
 
     // Block back button in kid mode — only parent can exit via PIN
     BackHandler { /* Intentionally empty — prevents exiting kid mode */ }
 
     Scaffold(
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = onParentAccess,
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Lock,
-                    contentDescription = "Parent Mode"
-                )
+            // Hide parent access FAB on TV (no touch input / no PIN keyboard)
+            if (!isTV) {
+                FloatingActionButton(
+                    onClick = onParentAccess,
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = "Parent Mode"
+                    )
+                }
             }
         }
     ) { padding ->
@@ -130,12 +151,14 @@ fun KidHomeScreen(
                             textAlign = TextAlign.Center,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Spacer(modifier = Modifier.height(24.dp))
-                        FloatingActionButton(
-                            onClick = onParentAccess,
-                            containerColor = MaterialTheme.colorScheme.primary
-                        ) {
-                            Icon(Icons.Default.Lock, contentDescription = "Parent Mode")
+                        if (!isTV) {
+                            Spacer(modifier = Modifier.height(24.dp))
+                            FloatingActionButton(
+                                onClick = onParentAccess,
+                                containerColor = MaterialTheme.colorScheme.primary
+                            ) {
+                                Icon(Icons.Default.Lock, contentDescription = "Parent Mode")
+                            }
                         }
                     }
                 }
@@ -170,16 +193,18 @@ fun KidHomeScreen(
                             textAlign = TextAlign.Center,
                             color = Color(0xFFB0B0D0).copy(alpha = 0.7f)
                         )
-                        Spacer(modifier = Modifier.height(24.dp))
-                        FloatingActionButton(
-                            onClick = onParentAccess,
-                            containerColor = Color(0xFF7B68EE)
-                        ) {
-                            Icon(
-                                Icons.Default.Lock,
-                                contentDescription = "Parent Mode",
-                                tint = Color.White
-                            )
+                        if (!isTV) {
+                            Spacer(modifier = Modifier.height(24.dp))
+                            FloatingActionButton(
+                                onClick = onParentAccess,
+                                containerColor = Color(0xFF7B68EE)
+                            ) {
+                                Icon(
+                                    Icons.Default.Lock,
+                                    contentDescription = "Parent Mode",
+                                    tint = Color.White
+                                )
+                            }
                         }
                     }
                 }
@@ -221,17 +246,30 @@ private fun KidHomeContent(
     onPlaylistClick: (youtubeId: String, title: String, thumbnailUrl: String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val configuration = LocalConfiguration.current
+    val screenWidthDp = configuration.screenWidthDp
+    // Adaptive columns: 2 on phone portrait, 3 on phone landscape/small tablet, 4+ on TV/large
+    val columnCount = when {
+        screenWidthDp >= 960 -> 5
+        screenWidthDp >= 720 -> 4
+        screenWidthDp >= 480 -> 3
+        else -> 2
+    }
+    val isWide = screenWidthDp >= 480
+    val spacing = if (isWide) 16.dp else 10.dp
+    val horizontalPadding = if (isWide) 24.dp else 12.dp
+
     LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
+        columns = GridCells.Fixed(columnCount),
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 12.dp),
+            .padding(horizontal = horizontalPadding),
         contentPadding = PaddingValues(bottom = 80.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        horizontalArrangement = Arrangement.spacedBy(spacing),
+        verticalArrangement = Arrangement.spacedBy(spacing)
     ) {
         // Greeting + Search — full width
-        item(span = { GridItemSpan(2) }) {
+        item(span = { GridItemSpan(maxLineSpan) }) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -254,7 +292,7 @@ private fun KidHomeContent(
 
         // Remaining time chip — full width
         uiState.remainingTimeFormatted?.let { remaining ->
-            item(span = { GridItemSpan(2) }) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Text(
                         text = "Time remaining: $remaining",
@@ -271,7 +309,7 @@ private fun KidHomeContent(
 
         // Channels — horizontal scrollable row (compact) — full width
         if (uiState.channels.isNotEmpty()) {
-            item(span = { GridItemSpan(2) }) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 Column {
                     Text(
                         text = "Channels",
@@ -295,7 +333,7 @@ private fun KidHomeContent(
 
         // Latest Videos from channels — 2-column grid
         if (uiState.latestVideos.isNotEmpty() || uiState.isLoadingVideos) {
-            item(span = { GridItemSpan(2) }) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 Text(
                     text = "Latest Videos",
                     style = MaterialTheme.typography.titleMedium,
@@ -304,7 +342,7 @@ private fun KidHomeContent(
             }
 
             if (uiState.isLoadingVideos && uiState.latestVideos.isEmpty()) {
-                item(span = { GridItemSpan(2) }) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -326,7 +364,7 @@ private fun KidHomeContent(
 
         // Individually whitelisted videos — full width row
         if (uiState.recentVideos.isNotEmpty()) {
-            item(span = { GridItemSpan(2) }) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 Column {
                     Text(
                         text = "Videos",
@@ -350,7 +388,7 @@ private fun KidHomeContent(
 
         // Playlists — full width row
         if (uiState.playlists.isNotEmpty()) {
-            item(span = { GridItemSpan(2) }) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 Column {
                     Text(
                         text = "Playlists",
@@ -379,10 +417,25 @@ private fun CompactChannelChip(
     channel: WhitelistItem,
     onClick: () -> Unit
 ) {
+    var isFocused by remember { mutableStateOf(false) }
     Column(
         modifier = Modifier
             .width(72.dp)
-            .clickable(onClick = onClick),
+            .clip(RoundedCornerShape(8.dp))
+            .then(
+                if (isFocused) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
+                else Modifier
+            )
+            .onFocusChanged { isFocused = it.isFocused }
+            .focusable()
+            .clickable(onClick = onClick)
+            .onKeyEvent { event ->
+                if (event.type == KeyEventType.KeyUp &&
+                    (event.key == Key.DirectionCenter || event.key == Key.Enter)
+                ) {
+                    onClick(); true
+                } else false
+            },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         AsyncImage(
@@ -409,10 +462,24 @@ private fun LatestVideoCard(
     video: PlaylistVideo,
     onClick: () -> Unit
 ) {
+    var isFocused by remember { mutableStateOf(false) }
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .then(
+                if (isFocused) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp))
+                else Modifier
+            )
+            .onFocusChanged { isFocused = it.isFocused }
+            .focusable()
             .clickable(onClick = onClick)
+            .onKeyEvent { event ->
+                if (event.type == KeyEventType.KeyUp &&
+                    (event.key == Key.DirectionCenter || event.key == Key.Enter)
+                ) {
+                    onClick(); true
+                } else false
+            }
     ) {
         Column {
             AsyncImage(
@@ -447,10 +514,24 @@ private fun WhitelistVideoCard(
     video: WhitelistItem,
     onClick: () -> Unit
 ) {
+    var isFocused by remember { mutableStateOf(false) }
     Card(
         modifier = Modifier
             .width(200.dp)
+            .then(
+                if (isFocused) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp))
+                else Modifier
+            )
+            .onFocusChanged { isFocused = it.isFocused }
+            .focusable()
             .clickable(onClick = onClick)
+            .onKeyEvent { event ->
+                if (event.type == KeyEventType.KeyUp &&
+                    (event.key == Key.DirectionCenter || event.key == Key.Enter)
+                ) {
+                    onClick(); true
+                } else false
+            }
     ) {
         Column {
             AsyncImage(

@@ -40,4 +40,5 @@ sealed interface Route {
         val playlistThumbnailUrl: String
     ) : Route
     @Serializable data object About : Route
+    @Serializable data object CredentialSettings : Route
 }
