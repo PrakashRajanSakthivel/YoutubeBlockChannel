@@ -6,16 +6,22 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.degipe.youtubewhitelist.core.common.result.AppResult
+import io.github.degipe.youtubewhitelist.core.data.model.PlaylistVideo
 import io.github.degipe.youtubewhitelist.core.data.model.WhitelistItem
 import io.github.degipe.youtubewhitelist.core.data.repository.WatchHistoryRepository
 import io.github.degipe.youtubewhitelist.core.data.repository.WhitelistRepository
+import io.github.degipe.youtubewhitelist.core.data.repository.YouTubeApiRepository
 import io.github.degipe.youtubewhitelist.core.data.sleep.SleepTimerManager
 import io.github.degipe.youtubewhitelist.core.data.sleep.SleepTimerStatus
 import io.github.degipe.youtubewhitelist.core.data.timelimit.TimeLimitChecker
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 data class VideoPlayerUiState(
@@ -23,10 +29,12 @@ data class VideoPlayerUiState(
     val videoTitle: String = "",
     val youtubeId: String = "",
     val siblingVideos: List<WhitelistItem> = emptyList(),
+    val suggestedVideos: List<PlaylistVideo> = emptyList(),
     val currentIndex: Int = -1,
     val hasNext: Boolean = false,
     val hasPrevious: Boolean = false,
     val isLoading: Boolean = true,
+    val isLoadingSuggestions: Boolean = false,
     val error: String? = null,
     val remainingTimeFormatted: String? = null,
     val isTimeLimitReached: Boolean = false,
@@ -39,6 +47,7 @@ class VideoPlayerViewModel @AssistedInject constructor(
     private val watchHistoryRepository: WatchHistoryRepository,
     private val timeLimitChecker: TimeLimitChecker,
     private val sleepTimerManager: SleepTimerManager,
+    private val youTubeApiRepository: YouTubeApiRepository,
     @Assisted("profileId") private val profileId: String,
     @Assisted("videoId") private val videoId: String,
     @Assisted("videoTitle") private val initialVideoTitle: String,
@@ -59,10 +68,13 @@ class VideoPlayerViewModel @AssistedInject constructor(
     val uiState: StateFlow<VideoPlayerUiState> = _uiState.asStateFlow()
 
     private var siblingsJob: Job? = null
+    private var videoPool: List<PlaylistVideo> = emptyList()
+    private val watchedIds = mutableSetOf<String>()
 
     init {
         loadVideo()
         loadSiblings()
+        loadSuggestedVideos()
         observeTimeLimit()
         observeSleepTimer()
     }
@@ -90,6 +102,49 @@ class VideoPlayerViewModel @AssistedInject constructor(
                         hasPrevious = currentIdx > 0
                     )
                 }
+        }
+    }
+
+    private fun loadSuggestedVideos() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoadingSuggestions = true)
+            val channels = whitelistRepository.getChannelsByProfile(profileId).first()
+            if (channels.isEmpty()) {
+                _uiState.value = _uiState.value.copy(isLoadingSuggestions = false)
+                return@launch
+            }
+
+            val allVideos = channels.map { channel ->
+                async {
+                    val playlistId = "UU" + channel.youtubeId.removePrefix("UC")
+                    when (val result = youTubeApiRepository.getPlaylistItemsPage(playlistId, null)) {
+                        is AppResult.Success -> result.data.videos
+                        is AppResult.Error -> emptyList()
+                    }
+                }
+            }.awaitAll()
+
+            // Flatten, shuffle, exclude current video
+            val candidates = allVideos.flatten()
+                .filter { it.videoId != _uiState.value.youtubeId }
+                .shuffled()
+
+            // Filter out Shorts (≤60s) by duration
+            val videoIds = candidates.map { it.videoId }
+            val durations = when (val result = youTubeApiRepository.getVideoDurations(videoIds)) {
+                is AppResult.Success -> result.data
+                is AppResult.Error -> emptyMap()
+            }
+            videoPool = candidates.filter { video ->
+                val durationSec = durations[video.videoId]
+                durationSec == null || durationSec > 60
+            }
+            watchedIds.add(_uiState.value.youtubeId)
+
+            _uiState.value = _uiState.value.copy(
+                suggestedVideos = pickSuggestions(),
+                isLoadingSuggestions = false
+            )
         }
     }
 
@@ -147,6 +202,30 @@ class VideoPlayerViewModel @AssistedInject constructor(
 
     fun playVideoAt(index: Int) {
         navigateToIndex(index)
+    }
+
+    fun playSuggestedVideo(video: PlaylistVideo) {
+        watchedIds.add(video.videoId)
+        _uiState.value = _uiState.value.copy(
+            videoId = video.videoId,
+            videoTitle = video.title,
+            youtubeId = video.videoId,
+            siblingVideos = emptyList(),
+            suggestedVideos = pickSuggestions(excludeId = video.videoId)
+        )
+    }
+
+    private fun pickSuggestions(excludeId: String? = null): List<PlaylistVideo> {
+        val currentId = excludeId ?: _uiState.value.youtubeId
+        val unwatched = videoPool
+            .filter { it.videoId != currentId && it.videoId !in watchedIds }
+            .shuffled()
+        if (unwatched.size >= 10) return unwatched.take(10)
+        // Not enough unwatched — recycle watched videos (except current)
+        val recycled = videoPool
+            .filter { it.videoId != currentId && it.videoId !in unwatched.map { u -> u.videoId }.toSet() }
+            .shuffled()
+        return (unwatched + recycled).take(10)
     }
 
     private fun navigateToIndex(index: Int) {

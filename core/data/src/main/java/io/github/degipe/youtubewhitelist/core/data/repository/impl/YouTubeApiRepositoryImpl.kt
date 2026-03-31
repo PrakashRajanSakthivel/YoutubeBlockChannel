@@ -154,6 +154,28 @@ class YouTubeApiRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun getVideoDurations(videoIds: List<String>): AppResult<Map<String, Long>> =
+        withContext(ioDispatcher) {
+            safeApiCall {
+                val durations = mutableMapOf<String, Long>()
+                // API accepts max 50 IDs per request
+                videoIds.chunked(50).forEach { batch ->
+                    val response = youTubeApiService.getVideos(
+                        part = "contentDetails",
+                        id = batch.joinToString(",")
+                    )
+                    if (response.isSuccessful) {
+                        response.body()?.items?.forEach { video ->
+                            video.contentDetails?.duration?.let { iso ->
+                                durations[video.id] = parseIsoDuration(iso)
+                            }
+                        }
+                    }
+                }
+                AppResult.Success(durations)
+            }
+        }
+
     private suspend fun <T> safeApiCall(block: suspend () -> AppResult<T>): AppResult<T> {
         return try {
             block()
@@ -165,6 +187,16 @@ class YouTubeApiRepositoryImpl @Inject constructor(
     }
 
     companion object {
+        /** Parse ISO 8601 duration (e.g. PT4M33S, PT1H2M3S) to seconds */
+        fun parseIsoDuration(iso: String): Long {
+            val regex = Regex("PT(?:(\\d+)H)?(?:(\\d+)M)?(?:(\\d+)S)?")
+            val match = regex.matchEntire(iso) ?: return 0
+            val hours = match.groupValues[1].toLongOrNull() ?: 0
+            val minutes = match.groupValues[2].toLongOrNull() ?: 0
+            val seconds = match.groupValues[3].toLongOrNull() ?: 0
+            return hours * 3600 + minutes * 60 + seconds
+        }
+
         fun ChannelDto.toDomain(): YouTubeMetadata.Channel = YouTubeMetadata.Channel(
             youtubeId = id,
             title = snippet?.title ?: "",

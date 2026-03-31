@@ -1,0 +1,9 @@
+v1.2.0 - Android TV, Csatorna-tiltólista, Hangkeresés, Futásidejű Beállítások
+
+• Android TV: Teljes D-pad navigáció a gyerek módban
+• TV teljes képernyős lejátszó D-pad-le javasolt videók rácsával
+• Csatorna-tiltólista: csatornák kizárása a gyerek nézetből
+• Videó hírfolyam főképernyő: adaptív rács, csatornafilter, Shorts szűrve
+• Hangkeresés: mikrofon gomb a keresőben (TV távirányító mikrofon is működik)
+• Futásidejű hitelesítő adatok: API kulcs és OAuth megadása az appban — újrafordítás nélkül
+• Javasolt videók pool lejátszás után, automatikus újrahasznosítással

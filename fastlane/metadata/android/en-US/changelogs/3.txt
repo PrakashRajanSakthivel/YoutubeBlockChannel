@@ -1,0 +1,9 @@
+v1.2.0 - Android TV, Channel Blocklist, Voice Search, Runtime Credentials
+
+• Android TV: Full D-pad navigation on all Kid Mode screens
+• TV fullscreen player with D-pad-Down overlay suggestions grid
+• Channel Blocklist: block channels from appearing in Kid Mode
+• Video Feed Home: adaptive grid with channel chips and Shorts filtered out
+• Voice Search: mic button in search bar (works with TV remote mic)
+• Runtime credential entry: enter API key & OAuth inside the app — no recompile needed
+• Suggested videos pool after each video with recycling

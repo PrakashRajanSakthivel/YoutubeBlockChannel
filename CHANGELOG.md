@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-04-01
+
+### Added
+- **Channel Blocklist**: Block specific YouTube channels from appearing in Kid Mode
+- **Video Feed Home Screen**: Kid Home redesigned as adaptive grid (2–5 columns) with channel chips and video cards
+- **Shorts Filter**: Videos shorter than 60 seconds automatically filtered out from Kid Mode
+- **Suggested Videos**: Pool of whitelisted related videos shown after each video with recycling when pool is exhausted
+- **Android TV Support**: Full D-pad/remote navigation across all Kid Mode screens (Home, Player, Channel, Playlist, Search)
+- **TV Fullscreen Player**: D-pad-Down reveals animated overlay with 4-column suggested videos grid
+- **Adaptive Layout**: Grid columns scale automatically (2 phone / 3 tablet / 4–5 TV) based on screen width
+- **Voice Search**: Mic button in Kid Search bar launches Android speech recognizer (works with TV remote mic buttons)
+- **Runtime Credential Entry**: Enter Google OAuth Client ID, Client Secret, and API Key directly inside the app — no recompilation needed
+- **API Credentials Screen**: New screen in Parent Dashboard to update credentials at any time
+- **Setup Guide**: Step-by-step guide for creating Google Cloud project and entering credentials ([docs/SETUP_GUIDE.md](docs/SETUP_GUIDE.md))
+
+### Changed
+- **Kid Home**: Replaced simple list with adaptive `LazyVerticalGrid`; channel chips filter video feed by channel
+- **Profile Selector**: D-pad focus support on TV; adaptive grid and Parent Mode button hidden on TV
+- **Parent Dashboard**: Added "API Credentials" card for runtime credential management
+- **First Launch Flow**: Auto-redirect to Credential Settings screen when no OAuth credentials are stored
+- **Android Manifest**: RECORD_AUDIO permission added for voice search; `touchscreen` feature declared not required (TV compatibility)
+
+### Security
+- **AES-256 EncryptedSharedPreferences** (`CredentialStore`) for secure on-device storage of API credentials
+- Credentials never logged or transmitted outside the app
+
 ## [1.1.0] - 2026-02-11
 
 ### Added

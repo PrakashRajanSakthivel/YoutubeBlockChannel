@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.QueryStats
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -66,7 +67,8 @@ fun ParentDashboardScreen(
     onWatchStats: (profileId: String) -> Unit,
     onExportImport: (parentAccountId: String) -> Unit,
     onCreateProfile: () -> Unit,
-    onAbout: () -> Unit
+    onAbout: () -> Unit,
+    onCredentialSettings: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -121,6 +123,7 @@ fun ParentDashboardScreen(
                 },
                 onCreateProfile = onCreateProfile,
                 onAbout = onAbout,
+                onCredentialSettings = onCredentialSettings,
                 modifier = Modifier.padding(padding)
             )
         }
@@ -153,6 +156,7 @@ private fun DashboardContent(
     onExportImport: () -> Unit,
     onCreateProfile: () -> Unit,
     onAbout: () -> Unit,
+    onCredentialSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -267,6 +271,14 @@ private fun DashboardContent(
             title = "About",
             subtitle = "App info, license, and support",
             onClick = onAbout,
+            enabled = true
+        )
+
+        ActionCard(
+            icon = Icons.Default.VpnKey,
+            title = "API Credentials",
+            subtitle = "Configure Google API keys for sign-in and YouTube access",
+            onClick = onCredentialSettings,
             enabled = true
         )
 
