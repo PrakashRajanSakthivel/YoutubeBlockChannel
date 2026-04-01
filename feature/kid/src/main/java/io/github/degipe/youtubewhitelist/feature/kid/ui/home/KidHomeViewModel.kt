@@ -9,7 +9,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.degipe.youtubewhitelist.core.common.result.AppResult
 import io.github.degipe.youtubewhitelist.core.data.model.PlaylistVideo
 import io.github.degipe.youtubewhitelist.core.data.model.WhitelistItem
-import io.github.degipe.youtubewhitelist.core.data.repository.BlocklistRepository
 import io.github.degipe.youtubewhitelist.core.data.repository.KidProfileRepository
 import io.github.degipe.youtubewhitelist.core.data.repository.WhitelistRepository
 import io.github.degipe.youtubewhitelist.core.data.repository.YouTubeApiRepository
@@ -45,7 +44,6 @@ class KidHomeViewModel @AssistedInject constructor(
     kidProfileRepository: KidProfileRepository,
     timeLimitChecker: TimeLimitChecker,
     sleepTimerManager: SleepTimerManager,
-    blocklistRepository: BlocklistRepository,
     private val youTubeApiRepository: YouTubeApiRepository,
     @Assisted private val profileId: String
 ) : ViewModel() {
@@ -67,31 +65,28 @@ class KidHomeViewModel @AssistedInject constructor(
             whitelistRepository.getPlaylistsByProfile(profileId),
             timeLimitChecker.getTimeLimitStatus(profileId),
             sleepTimerManager.state,
-            blocklistRepository.getBlockedChannelIdsFlow(profileId),
             combine(_latestVideos, _isLoadingVideos) { vids, loading -> vids to loading }
-        ) { playlists, timeLimit, sleepState, blockedIds, videosPair ->
-            FiveResult(playlists, timeLimit, sleepState, blockedIds, videosPair)
+        ) { playlists, timeLimit, sleepState, videosPair ->
+            FourResult(playlists, timeLimit, sleepState, videosPair)
         }
     ) { profile, channels, videos, extra ->
-        val blockedSet = extra.blockedIds.toSet()
-        val filteredChannels = channels.filter { it.youtubeId !in blockedSet }
         val (latestVids, loadingVids) = extra.videosPair
 
         // Trigger video fetch when channels first arrive
-        if (!videosLoaded && filteredChannels.isNotEmpty()) {
+        if (!videosLoaded && channels.isNotEmpty()) {
             videosLoaded = true
-            fetchVideosFromChannels(filteredChannels)
+            fetchVideosFromChannels(channels)
         }
 
         KidHomeUiState(
             profileName = profile?.name ?: "",
-            channels = filteredChannels,
+            channels = channels,
             latestVideos = latestVids,
             recentVideos = videos,
             playlists = extra.playlists,
             isLoading = false,
             isLoadingVideos = loadingVids,
-            isEmpty = filteredChannels.isEmpty() && videos.isEmpty() && extra.playlists.isEmpty() && latestVids.isEmpty(),
+            isEmpty = channels.isEmpty() && videos.isEmpty() && extra.playlists.isEmpty() && latestVids.isEmpty(),
             remainingTimeFormatted = extra.timeLimitStatus.remainingSeconds?.let { formatRemaining(it) },
             isTimeLimitReached = extra.timeLimitStatus.isLimitReached,
             isSleepTimerExpired = extra.sleepState.status == SleepTimerStatus.EXPIRED
@@ -137,11 +132,10 @@ class KidHomeViewModel @AssistedInject constructor(
         }
     }
 
-    private data class FiveResult(
+    private data class FourResult(
         val playlists: List<WhitelistItem>,
         val timeLimitStatus: io.github.degipe.youtubewhitelist.core.data.timelimit.TimeLimitStatus,
         val sleepState: io.github.degipe.youtubewhitelist.core.data.sleep.SleepTimerState,
-        val blockedIds: List<String>,
         val videosPair: Pair<List<PlaylistVideo>, Boolean>
     )
 

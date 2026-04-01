@@ -15,8 +15,7 @@ data class ExportProfile(
     val avatarUrl: String? = null,
     val dailyLimitMinutes: Int? = null,
     val sleepPlaylistId: String? = null,
-    val whitelistItems: List<ExportWhitelistItem>,
-    val blockedChannels: List<ExportBlockedChannel> = emptyList()
+    val whitelistItems: List<ExportWhitelistItem>
 )
 
 @Serializable
@@ -26,11 +25,4 @@ data class ExportWhitelistItem(
     val title: String,
     val thumbnailUrl: String,
     val channelTitle: String? = null
-)
-
-@Serializable
-data class ExportBlockedChannel(
-    val channelId: String,
-    val channelTitle: String,
-    val channelThumbnailUrl: String? = null
 )

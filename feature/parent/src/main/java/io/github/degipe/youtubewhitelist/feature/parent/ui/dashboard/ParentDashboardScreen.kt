@@ -21,7 +21,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Bedtime
-import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
@@ -60,7 +59,6 @@ fun ParentDashboardScreen(
     onBackToKidMode: (profileId: String) -> Unit,
     onChangePin: () -> Unit,
     onOpenWhitelistManager: (profileId: String) -> Unit,
-    onOpenBlocklist: (profileId: String) -> Unit,
     onOpenBrowser: (profileId: String) -> Unit,
     onOpenSleepMode: (profileId: String) -> Unit,
     onEditProfile: (profileId: String) -> Unit,
@@ -102,9 +100,6 @@ fun ParentDashboardScreen(
                 onChangePin = onChangePin,
                 onOpenWhitelistManager = {
                     uiState.selectedProfileId?.let { onOpenWhitelistManager(it) }
-                },
-                onOpenBlocklist = {
-                    uiState.selectedProfileId?.let { onOpenBlocklist(it) }
                 },
                 onOpenBrowser = {
                     uiState.selectedProfileId?.let { onOpenBrowser(it) }
@@ -148,7 +143,6 @@ private fun DashboardContent(
     onBackToKidMode: () -> Unit,
     onChangePin: () -> Unit,
     onOpenWhitelistManager: () -> Unit,
-    onOpenBlocklist: () -> Unit,
     onOpenBrowser: () -> Unit,
     onOpenSleepMode: () -> Unit,
     onEditProfile: () -> Unit,
@@ -199,14 +193,6 @@ private fun DashboardContent(
             title = "Manage Whitelist",
             subtitle = "View and edit whitelisted content for the selected profile",
             onClick = onOpenWhitelistManager,
-            enabled = uiState.selectedProfileId != null
-        )
-
-        ActionCard(
-            icon = Icons.Default.Block,
-            title = "Manage Blocklist",
-            subtitle = "Block channels from appearing in kid mode",
-            onClick = onOpenBlocklist,
             enabled = uiState.selectedProfileId != null
         )
 
