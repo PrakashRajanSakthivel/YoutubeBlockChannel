@@ -8,8 +8,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -23,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.degipe.youtubewhitelist.R
+import io.github.degipe.youtubewhitelist.core.common.util.tvFocusBorder
 
 @Composable
 fun SignInScreen(
@@ -30,6 +33,7 @@ fun SignInScreen(
     viewModel: SignInViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val secondsRemaining by viewModel.secondsRemaining.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     LaunchedEffect(uiState) {
@@ -65,6 +69,21 @@ fun SignInScreen(
         when (uiState) {
             SignInUiState.Loading -> {
                 CircularProgressIndicator()
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = secondsRemaining?.let { "Waiting for sign in... (${it}s)" }
+                        ?: "Waiting for sign in...",
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedButton(
+                    onClick = { viewModel.cancelSignIn() },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Cancel")
+                }
             }
             is SignInUiState.Error -> {
                 Text(
@@ -86,7 +105,7 @@ fun SignInScreen(
 private fun SignInButton(onClick: () -> Unit) {
     Button(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth().tvFocusBorder()
     ) {
         Text(text = stringResource(R.string.sign_in_button))
     }

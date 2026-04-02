@@ -46,7 +46,9 @@ import io.github.degipe.youtubewhitelist.core.export.ImportStrategy
 @Composable
 fun ExportImportScreen(
     viewModel: ExportImportViewModel,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onQrSend: () -> Unit = {},
+    onQrReceive: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -216,6 +218,50 @@ fun ExportImportScreen(
                         } else {
                             Text("Import from File")
                         }
+                    }
+                }
+            }
+
+            // QR transfer — send section (phone → TV)
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "Send to TV (QR)",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Scan the QR code shown on the TV to transfer all profiles over Wi-Fi.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedButton(
+                        onClick = onQrSend,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Scan TV QR Code")
+                    }
+                }
+            }
+
+            // QR transfer — receive section (TV waits for phone)
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "Receive from Phone (QR)",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Show a QR code that the phone can scan to send profiles to this device.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedButton(
+                        onClick = onQrReceive,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Show QR Code")
                     }
                 }
             }

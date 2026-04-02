@@ -17,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import io.github.degipe.youtubewhitelist.core.common.util.tvFocusBorder
 
 @Composable
 fun PinKeypad(
@@ -44,7 +45,7 @@ fun PinKeypad(
         ) {
             IconButton(
                 onClick = onBackspace,
-                modifier = Modifier.size(72.dp)
+                modifier = Modifier.size(72.dp).tvFocusBorder(shape = CircleShape)
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.Backspace,
@@ -58,7 +59,7 @@ fun PinKeypad(
             IconButton(
                 onClick = onSubmit,
                 enabled = submitEnabled,
-                modifier = Modifier.size(72.dp)
+                modifier = Modifier.size(72.dp).tvFocusBorder(shape = CircleShape)
             ) {
                 Icon(
                     imageVector = Icons.Default.Check,
@@ -95,7 +96,7 @@ private fun DigitButton(
 ) {
     FilledTonalButton(
         onClick = { onClick(digit) },
-        modifier = Modifier.size(72.dp),
+        modifier = Modifier.size(72.dp).tvFocusBorder(shape = CircleShape),
         shape = CircleShape
     ) {
         Text(

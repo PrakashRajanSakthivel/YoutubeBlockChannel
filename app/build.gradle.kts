@@ -139,6 +139,15 @@ dependencies {
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
 
+    // CameraX for QR scanning
+    implementation(libs.camera.core)
+    implementation(libs.camera.camera2)
+    implementation(libs.camera.lifecycle)
+    implementation(libs.camera.view)
+    implementation(libs.zxing.core)
+    // NanoHTTPD — needed to compile against QrTransferServer's type hierarchy
+    implementation(libs.nanohttpd)
+
     // Testing
     testImplementation(libs.junit)
     testImplementation(libs.mockk)

@@ -39,6 +39,11 @@ biometric = "1.2.0-alpha05"
 # Browser (Custom Chrome Tabs)
 browser = "1.8.0"
 
+# QR / Camera transfer
+zxing = "3.5.3"
+nanohttpd = "2.3.1"
+cameraX = "1.4.1"
+
 # Image Loading
 coil = "2.7.0"
 
@@ -95,6 +100,16 @@ okhttp-logging = { group = "com.squareup.okhttp3", name = "logging-interceptor",
 
 # Browser (Custom Chrome Tabs)
 androidx-browser = { group = "androidx.browser", name = "browser", version.ref = "browser" }
+
+# QR code generation (ZXing core - no Play Services)
+zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
+# NanoHTTPD - tiny embedded HTTP server
+nanohttpd = { group = "org.nanohttpd", name = "nanohttpd", version.ref = "nanohttpd" }
+# CameraX for QR scanning
+camera-core = { group = "androidx.camera", name = "camera-core", version.ref = "cameraX" }
+camera-camera2 = { group = "androidx.camera", name = "camera-camera2", version.ref = "cameraX" }
+camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "cameraX" }
+camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "cameraX" }
 
 # Image Loading
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }

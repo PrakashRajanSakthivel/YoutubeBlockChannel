@@ -49,6 +49,10 @@ import io.github.degipe.youtubewhitelist.ui.screen.pin.PinEntryScreen
 import io.github.degipe.youtubewhitelist.ui.screen.pin.PinSetupScreen
 import io.github.degipe.youtubewhitelist.ui.screen.profile.ProfileCreationScreen
 import io.github.degipe.youtubewhitelist.ui.screen.splash.SplashScreen
+import io.github.degipe.youtubewhitelist.ui.screen.transfer.DeviceSetupChoiceScreen
+import io.github.degipe.youtubewhitelist.ui.screen.transfer.QrReceiveScreen
+import io.github.degipe.youtubewhitelist.ui.screen.transfer.QrReceiveViewModel
+import io.github.degipe.youtubewhitelist.ui.screen.transfer.QrSendScreen
 
 @Composable
 fun AppNavigation(
@@ -106,9 +110,50 @@ fun AppNavigation(
         composable<Route.PinSetup> {
             PinSetupScreen(
                 onPinSet = {
-                    navController.navigate(Route.ProfileCreation) {
+                    navController.navigate(Route.DeviceSetupChoice) {
                         popUpTo<Route.PinSetup> { inclusive = true }
                     }
+                }
+            )
+        }
+
+        composable<Route.DeviceSetupChoice> {
+            DeviceSetupChoiceScreen(
+                onCreateNew = {
+                    navController.navigate(Route.ProfileCreation) {
+                        popUpTo<Route.DeviceSetupChoice> { inclusive = true }
+                    }
+                },
+                onImportFromPhone = {
+                    navController.navigate(Route.QrReceive) {
+                        popUpTo<Route.DeviceSetupChoice> { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable<Route.QrReceive> {
+            val viewModel: QrReceiveViewModel = hiltViewModel()
+            QrReceiveScreen(
+                viewModel = viewModel,
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onImportSuccess = {
+                    navController.navigate(Route.ProfileSelector) {
+                        popUpTo(navController.graph.id) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable<Route.QrSend> {
+            QrSendScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onSendSuccess = {
+                    navController.popBackStack()
                 }
             )
         }
@@ -470,6 +515,12 @@ fun AppNavigation(
                 viewModel = viewModel,
                 onNavigateBack = {
                     navController.popBackStack()
+                },
+                onQrSend = {
+                    navController.navigate(Route.QrSend)
+                },
+                onQrReceive = {
+                    navController.navigate(Route.QrReceive)
                 }
             )
         }

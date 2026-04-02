@@ -40,4 +40,10 @@ sealed interface Route {
     ) : Route
     @Serializable data object About : Route
     @Serializable data object CredentialSettings : Route
+    /** Shown after PinSetup on a fresh install: user chooses "Create profile" or "Import from phone" */
+    @Serializable data object DeviceSetupChoice : Route
+    /** TV: shows a QR code and waits for the phone to send profile data */
+    @Serializable data object QrReceive : Route
+    /** Phone: opens camera to scan TV's QR code, then sends profile data */
+    @Serializable data object QrSend : Route
 }

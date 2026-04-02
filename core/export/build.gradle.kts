@@ -32,6 +32,11 @@ dependencies {
     // Serialization
     implementation(libs.kotlinx.serialization.json)
 
+    // QR transfer - HTTP server + ZXing QR generation + HTTP client
+    implementation(libs.nanohttpd)
+    implementation(libs.zxing.core)
+    implementation(libs.okhttp)
+
     // Hilt
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)

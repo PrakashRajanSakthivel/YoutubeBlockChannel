@@ -50,6 +50,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.degipe.youtubewhitelist.core.common.util.tvFocusBorder
 import io.github.degipe.youtubewhitelist.core.data.model.KidProfile
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -357,6 +358,7 @@ private fun ActionCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .tvFocusBorder()
             .clickable(enabled = enabled, onClick = onClick),
         colors = CardDefaults.cardColors(
             containerColor = if (enabled)
