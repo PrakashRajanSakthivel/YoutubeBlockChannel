@@ -5,11 +5,13 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import io.github.degipe.youtubewhitelist.core.data.repository.BlockedChannelRepository
 import io.github.degipe.youtubewhitelist.core.data.repository.ChannelVideoCacheRepository
 import io.github.degipe.youtubewhitelist.core.data.repository.KidProfileRepository
 import io.github.degipe.youtubewhitelist.core.data.repository.WatchHistoryRepository
 import io.github.degipe.youtubewhitelist.core.data.repository.WhitelistRepository
 import io.github.degipe.youtubewhitelist.core.data.repository.YouTubeApiRepository
+import io.github.degipe.youtubewhitelist.core.data.repository.impl.BlockedChannelRepositoryImpl
 import io.github.degipe.youtubewhitelist.core.data.repository.impl.ChannelVideoCacheRepositoryImpl
 import io.github.degipe.youtubewhitelist.core.data.repository.impl.KidProfileRepositoryImpl
 import io.github.degipe.youtubewhitelist.core.data.repository.impl.WatchHistoryRepositoryImpl
@@ -47,6 +49,10 @@ abstract class DataModule {
     @Binds
     @Singleton
     abstract fun bindChannelVideoCacheRepository(impl: ChannelVideoCacheRepositoryImpl): ChannelVideoCacheRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindBlockedChannelRepository(impl: BlockedChannelRepositoryImpl): BlockedChannelRepository
 
     @Binds
     @Singleton

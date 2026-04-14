@@ -28,6 +28,20 @@ class InvidiousApiService(
         return json.decodeFromString<InvidiousPlaylistDto>(body)
     }
 
+    suspend fun searchVideos(baseUrl: String, query: String): List<InvidiousVideoSearchResultDto> {
+        val encoded = java.net.URLEncoder.encode(query, "UTF-8")
+        val url = "$baseUrl/api/v1/search?q=$encoded&type=video&page=1"
+        val body = fetchJson(url)
+        return json.decodeFromString(body)
+    }
+
+    suspend fun searchChannels(baseUrl: String, query: String): List<InvidiousChannelSearchResultDto> {
+        val encoded = java.net.URLEncoder.encode(query, "UTF-8")
+        val url = "$baseUrl/api/v1/search?q=$encoded&type=channel&page=1"
+        val body = fetchJson(url)
+        return json.decodeFromString(body)
+    }
+
     suspend fun resolveChannel(baseUrl: String, handle: String): String {
         val encodedUrl = java.net.URLEncoder.encode(
             "https://www.youtube.com/@$handle", "UTF-8"

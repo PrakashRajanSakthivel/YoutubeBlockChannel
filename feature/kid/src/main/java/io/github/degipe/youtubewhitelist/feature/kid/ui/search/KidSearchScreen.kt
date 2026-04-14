@@ -23,14 +23,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -61,8 +62,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
-import io.github.degipe.youtubewhitelist.core.common.model.WhitelistItemType
-import io.github.degipe.youtubewhitelist.core.data.model.WhitelistItem
+import io.github.degipe.youtubewhitelist.core.data.model.SearchResult
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -70,15 +70,12 @@ import java.util.Locale
 fun KidSearchScreen(
     viewModel: KidSearchViewModel,
     onNavigateBack: () -> Unit,
-    onVideoClick: (videoId: String, videoTitle: String, channelTitle: String?) -> Unit,
-    onChannelClick: (youtubeId: String, channelTitle: String, thumbnailUrl: String) -> Unit,
-    onPlaylistClick: (youtubeId: String, title: String, thumbnailUrl: String) -> Unit
+    onVideoClick: (videoId: String, videoTitle: String, channelTitle: String?) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val query by viewModel.query.collectAsStateWithLifecycle()
     val focusRequester = remember { FocusRequester() }
 
-    // Voice search launcher
     val voiceSearchLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -116,7 +113,7 @@ fun KidSearchScreen(
                     TextField(
                         value = query,
                         onValueChange = viewModel::onQueryChanged,
-                        placeholder = { Text("Search videos, channels...") },
+                        placeholder = { Text("Search YouTube...") },
                         singleLine = true,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -167,10 +164,48 @@ fun KidSearchScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Type to search your videos and channels",
+                        text = "Search all of YouTube",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+            }
+            uiState.isLoading -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+            uiState.error != null -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Default.ErrorOutline,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Search failed",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Check your internet connection",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
             uiState.results.isEmpty() -> {
@@ -203,16 +238,10 @@ fun KidSearchScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(uiState.results, key = { it.id }) { item ->
+                    items(uiState.results, key = { it.videoId }) { item ->
                         SearchResultCard(
                             item = item,
-                            onClick = {
-                                when (item.type) {
-                                    WhitelistItemType.VIDEO -> onVideoClick(item.youtubeId, item.title, item.channelTitle)
-                                    WhitelistItemType.CHANNEL -> onChannelClick(item.youtubeId, item.title, item.thumbnailUrl)
-                                    WhitelistItemType.PLAYLIST -> onPlaylistClick(item.youtubeId, item.title, item.thumbnailUrl)
-                                }
-                            }
+                            onClick = { onVideoClick(item.videoId, item.title, item.channelTitle) }
                         )
                     }
                 }
@@ -223,7 +252,7 @@ fun KidSearchScreen(
 
 @Composable
 private fun SearchResultCard(
-    item: WhitelistItem,
+    item: SearchResult,
     onClick: () -> Unit
 ) {
     var isFocused by remember { mutableStateOf(false) }
@@ -251,32 +280,16 @@ private fun SearchResultCard(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            when (item.type) {
-                WhitelistItemType.CHANNEL -> {
-                    AsyncImage(
-                        model = item.thumbnailUrl,
-                        contentDescription = item.title,
-                        modifier = Modifier
-                            .size(56.dp)
-                            .clip(CircleShape),
-                        contentScale = ContentScale.Crop
-                    )
-                }
-                else -> {
-                    AsyncImage(
-                        model = item.thumbnailUrl,
-                        contentDescription = item.title,
-                        modifier = Modifier
-                            .width(100.dp)
-                            .aspectRatio(16f / 9f)
-                            .clip(RoundedCornerShape(4.dp)),
-                        contentScale = ContentScale.Crop
-                    )
-                }
-            }
-
+            AsyncImage(
+                model = item.thumbnailUrl,
+                contentDescription = item.title,
+                modifier = Modifier
+                    .width(100.dp)
+                    .aspectRatio(16f / 9f)
+                    .clip(RoundedCornerShape(4.dp)),
+                contentScale = ContentScale.Crop
+            )
             Spacer(modifier = Modifier.width(12.dp))
-
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = item.title,
@@ -286,11 +299,7 @@ private fun SearchResultCard(
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = when (item.type) {
-                        WhitelistItemType.CHANNEL -> "Channel"
-                        WhitelistItemType.VIDEO -> item.channelTitle ?: "Video"
-                        WhitelistItemType.PLAYLIST -> "Playlist"
-                    },
+                    text = item.channelTitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,

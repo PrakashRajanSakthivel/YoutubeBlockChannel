@@ -4,8 +4,10 @@ import io.github.degipe.youtubewhitelist.core.common.di.IoDispatcher
 import io.github.degipe.youtubewhitelist.core.common.result.AppResult
 import io.github.degipe.youtubewhitelist.core.data.mapper.InvidiousMapper
 import io.github.degipe.youtubewhitelist.core.data.mapper.OEmbedMapper
+import io.github.degipe.youtubewhitelist.core.data.model.ChannelSearchResult
 import io.github.degipe.youtubewhitelist.core.data.model.PaginatedPlaylistResult
 import io.github.degipe.youtubewhitelist.core.data.model.PlaylistVideo
+import io.github.degipe.youtubewhitelist.core.data.model.SearchResult
 import io.github.degipe.youtubewhitelist.core.data.model.YouTubeMetadata
 import io.github.degipe.youtubewhitelist.core.data.repository.YouTubeApiRepository
 import io.github.degipe.youtubewhitelist.core.network.api.YouTubeApiService
@@ -126,6 +128,20 @@ class HybridYouTubeRepositoryImpl @Inject constructor(
             } catch (e: Exception) {
                 AppResult.Error("Unexpected error", e)
             }
+        }
+
+    override suspend fun searchGlobal(query: String): AppResult<List<SearchResult>> =
+        withContext(ioDispatcher) {
+            tryInvidiousSearchVideos(query)
+                ?: tryApiSearchGlobal(query)
+                ?: AppResult.Error("Search unavailable — check internet connection")
+        }
+
+    override suspend fun searchChannels(query: String): AppResult<List<ChannelSearchResult>> =
+        withContext(ioDispatcher) {
+            tryInvidiousSearchChannels(query)
+                ?: tryApiSearchChannels(query)
+                ?: AppResult.Error("Channel search unavailable — check internet connection")
         }
 
     // --- oEmbed ---
@@ -339,6 +355,82 @@ class HybridYouTubeRepositoryImpl @Inject constructor(
     }
 
     // --- Invidious ---
+
+    private suspend fun tryInvidiousSearchVideos(query: String): AppResult<List<SearchResult>>? {
+        return withInvidiousFallback { baseUrl ->
+            val dtos = invidiousApiService.searchVideos(baseUrl, query)
+            val results = dtos.map { dto ->
+                SearchResult(
+                    videoId = dto.videoId,
+                    title = dto.title,
+                    thumbnailUrl = dto.videoThumbnails
+                        .maxByOrNull { it.width }?.url
+                        ?.takeIf { it.isNotBlank() } ?: "",
+                    channelId = dto.authorId,
+                    channelTitle = dto.author
+                )
+            }
+            AppResult.Success(results)
+        }
+    }
+
+    private suspend fun tryInvidiousSearchChannels(query: String): AppResult<List<ChannelSearchResult>>? {
+        return withInvidiousFallback { baseUrl ->
+            val dtos = invidiousApiService.searchChannels(baseUrl, query)
+            val results = dtos.map { dto ->
+                ChannelSearchResult(
+                    channelId = dto.authorId,
+                    channelTitle = dto.author,
+                    thumbnailUrl = dto.authorThumbnails
+                        .maxByOrNull { it.width }?.url
+                        ?.takeIf { it.isNotBlank() } ?: ""
+                )
+            }
+            AppResult.Success(results)
+        }
+    }
+
+    private suspend fun tryApiSearchGlobal(query: String): AppResult<List<SearchResult>>? {
+        return try {
+            val response = youTubeApiService.search(query = query, type = "video", maxResults = 25)
+            if (!response.isSuccessful) return null
+            val items = response.body()?.items.orEmpty()
+            val results = items.mapNotNull { item ->
+                val videoId = item.id?.videoId ?: return@mapNotNull null
+                val snippet = item.snippet ?: return@mapNotNull null
+                SearchResult(
+                    videoId = videoId,
+                    title = snippet.title,
+                    thumbnailUrl = snippet.thumbnails.bestUrl(),
+                    channelId = snippet.channelId,
+                    channelTitle = snippet.channelTitle
+                )
+            }
+            AppResult.Success(results)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private suspend fun tryApiSearchChannels(query: String): AppResult<List<ChannelSearchResult>>? {
+        return try {
+            val response = youTubeApiService.search(query = query, type = "channel", maxResults = 25)
+            if (!response.isSuccessful) return null
+            val items = response.body()?.items.orEmpty()
+            val results = items.mapNotNull { item ->
+                val channelId = item.id?.channelId ?: return@mapNotNull null
+                val snippet = item.snippet ?: return@mapNotNull null
+                ChannelSearchResult(
+                    channelId = channelId,
+                    channelTitle = snippet.title,
+                    thumbnailUrl = snippet.thumbnails.bestUrl()
+                )
+            }
+            AppResult.Success(results)
+        } catch (_: Exception) {
+            null
+        }
+    }
 
     private suspend fun tryInvidiousVideo(videoId: String): AppResult<YouTubeMetadata.Video>? {
         return withInvidiousFallback { baseUrl ->

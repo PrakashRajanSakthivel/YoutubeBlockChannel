@@ -38,6 +38,8 @@ import io.github.degipe.youtubewhitelist.feature.parent.ui.stats.WatchStatsScree
 import io.github.degipe.youtubewhitelist.feature.parent.ui.stats.WatchStatsViewModel
 import io.github.degipe.youtubewhitelist.feature.parent.ui.whitelist.WhitelistManagerScreen
 import io.github.degipe.youtubewhitelist.feature.parent.ui.about.AboutScreen
+import io.github.degipe.youtubewhitelist.feature.parent.ui.blockedchannels.BlockedChannelsScreen
+import io.github.degipe.youtubewhitelist.feature.parent.ui.blockedchannels.BlockedChannelsViewModel
 import io.github.degipe.youtubewhitelist.feature.parent.ui.whitelist.WhitelistManagerViewModel
 import io.github.degipe.youtubewhitelist.ui.screen.credentials.CredentialSettingsScreen
 import io.github.degipe.youtubewhitelist.ui.screen.credentials.CredentialSettingsViewModel
@@ -312,16 +314,6 @@ fun AppNavigation(
                             channelTitle = channelTitle
                         )
                     )
-                },
-                onChannelClick = { channelId, channelTitle, thumbnailUrl ->
-                    navController.navigate(
-                        Route.ChannelDetail(route.profileId, channelId, channelTitle, thumbnailUrl)
-                    )
-                },
-                onPlaylistClick = { youtubeId, title, thumbnailUrl ->
-                    navController.navigate(
-                        Route.PlaylistDetail(route.profileId, youtubeId, title, thumbnailUrl)
-                    )
                 }
             )
         }
@@ -389,6 +381,9 @@ fun AppNavigation(
                 },
                 onCredentialSettings = {
                     navController.navigate(Route.CredentialSettings)
+                },
+                onBlockedChannels = {
+                    navController.navigate(Route.BlockedChannels)
                 }
             )
         }
@@ -398,6 +393,14 @@ fun AppNavigation(
                 onNavigateBack = {
                     navController.popBackStack()
                 }
+            )
+        }
+
+        composable<Route.BlockedChannels> {
+            val viewModel: BlockedChannelsViewModel = hiltViewModel()
+            BlockedChannelsScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 

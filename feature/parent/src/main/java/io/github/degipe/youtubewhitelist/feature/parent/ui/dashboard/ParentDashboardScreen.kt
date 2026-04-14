@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Bedtime
+import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
@@ -67,7 +68,8 @@ fun ParentDashboardScreen(
     onExportImport: (parentAccountId: String) -> Unit,
     onCreateProfile: () -> Unit,
     onAbout: () -> Unit,
-    onCredentialSettings: () -> Unit
+    onCredentialSettings: () -> Unit,
+    onBlockedChannels: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -120,6 +122,7 @@ fun ParentDashboardScreen(
                 onCreateProfile = onCreateProfile,
                 onAbout = onAbout,
                 onCredentialSettings = onCredentialSettings,
+                onBlockedChannels = onBlockedChannels,
                 modifier = Modifier.padding(padding)
             )
         }
@@ -152,6 +155,7 @@ private fun DashboardContent(
     onCreateProfile: () -> Unit,
     onAbout: () -> Unit,
     onCredentialSettings: () -> Unit,
+    onBlockedChannels: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -266,6 +270,14 @@ private fun DashboardContent(
             title = "API Credentials",
             subtitle = "Configure Google API keys for sign-in and YouTube access",
             onClick = onCredentialSettings,
+            enabled = true
+        )
+
+        ActionCard(
+            icon = Icons.Default.Block,
+            title = "Blocked Channels",
+            subtitle = "Block channels from appearing in kid search results",
+            onClick = onBlockedChannels,
             enabled = true
         )
 

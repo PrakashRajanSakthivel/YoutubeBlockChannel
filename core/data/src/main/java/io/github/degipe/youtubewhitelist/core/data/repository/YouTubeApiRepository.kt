@@ -1,8 +1,10 @@
 package io.github.degipe.youtubewhitelist.core.data.repository
 
 import io.github.degipe.youtubewhitelist.core.common.result.AppResult
+import io.github.degipe.youtubewhitelist.core.data.model.ChannelSearchResult
 import io.github.degipe.youtubewhitelist.core.data.model.PaginatedPlaylistResult
 import io.github.degipe.youtubewhitelist.core.data.model.PlaylistVideo
+import io.github.degipe.youtubewhitelist.core.data.model.SearchResult
 import io.github.degipe.youtubewhitelist.core.data.model.YouTubeMetadata
 
 interface YouTubeApiRepository {
@@ -14,4 +16,6 @@ interface YouTubeApiRepository {
     suspend fun getPlaylistItemsPage(playlistId: String, pageToken: String? = null): AppResult<PaginatedPlaylistResult>
     suspend fun searchVideosInChannel(channelId: String, query: String): AppResult<List<PlaylistVideo>>
     suspend fun getVideoDurations(videoIds: List<String>): AppResult<Map<String, Long>>
+    suspend fun searchGlobal(query: String): AppResult<List<SearchResult>>
+    suspend fun searchChannels(query: String): AppResult<List<ChannelSearchResult>>
 }

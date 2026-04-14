@@ -40,6 +40,7 @@ sealed interface Route {
     ) : Route
     @Serializable data object About : Route
     @Serializable data object CredentialSettings : Route
+    @Serializable data object BlockedChannels : Route
     /** Shown after PinSetup on a fresh install: user chooses "Create profile" or "Import from phone" */
     @Serializable data object DeviceSetupChoice : Route
     /** TV: shows a QR code and waits for the phone to send profile data */

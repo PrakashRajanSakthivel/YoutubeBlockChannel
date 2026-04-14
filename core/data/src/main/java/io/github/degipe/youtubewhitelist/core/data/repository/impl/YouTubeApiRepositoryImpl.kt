@@ -2,8 +2,10 @@ package io.github.degipe.youtubewhitelist.core.data.repository.impl
 
 import io.github.degipe.youtubewhitelist.core.common.di.IoDispatcher
 import io.github.degipe.youtubewhitelist.core.common.result.AppResult
+import io.github.degipe.youtubewhitelist.core.data.model.ChannelSearchResult
 import io.github.degipe.youtubewhitelist.core.data.model.PaginatedPlaylistResult
 import io.github.degipe.youtubewhitelist.core.data.model.PlaylistVideo
+import io.github.degipe.youtubewhitelist.core.data.model.SearchResult
 import io.github.degipe.youtubewhitelist.core.data.model.YouTubeMetadata
 import io.github.degipe.youtubewhitelist.core.data.repository.YouTubeApiRepository
 import io.github.degipe.youtubewhitelist.core.network.api.YouTubeApiService
@@ -173,6 +175,46 @@ class YouTubeApiRepositoryImpl @Inject constructor(
                     }
                 }
                 AppResult.Success(durations)
+            }
+        }
+
+    override suspend fun searchGlobal(query: String): AppResult<List<SearchResult>> =
+        withContext(ioDispatcher) {
+            safeApiCall {
+                val response = youTubeApiService.search(query = query, type = "video", maxResults = 25)
+                if (!response.isSuccessful) return@safeApiCall AppResult.Error("Search API error: ${response.code()}")
+                val items = response.body()?.items.orEmpty()
+                val results = items.mapNotNull { item ->
+                    val videoId = item.id?.videoId ?: return@mapNotNull null
+                    val snippet = item.snippet ?: return@mapNotNull null
+                    SearchResult(
+                        videoId = videoId,
+                        title = snippet.title,
+                        thumbnailUrl = snippet.thumbnails.bestUrl(),
+                        channelId = snippet.channelId,
+                        channelTitle = snippet.channelTitle
+                    )
+                }
+                AppResult.Success(results)
+            }
+        }
+
+    override suspend fun searchChannels(query: String): AppResult<List<ChannelSearchResult>> =
+        withContext(ioDispatcher) {
+            safeApiCall {
+                val response = youTubeApiService.search(query = query, type = "channel", maxResults = 25)
+                if (!response.isSuccessful) return@safeApiCall AppResult.Error("Channel search API error: ${response.code()}")
+                val items = response.body()?.items.orEmpty()
+                val results = items.mapNotNull { item ->
+                    val channelId = item.id?.channelId ?: return@mapNotNull null
+                    val snippet = item.snippet ?: return@mapNotNull null
+                    ChannelSearchResult(
+                        channelId = channelId,
+                        channelTitle = snippet.title,
+                        thumbnailUrl = snippet.thumbnails.bestUrl()
+                    )
+                }
+                AppResult.Success(results)
             }
         }
 

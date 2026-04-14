@@ -43,3 +43,19 @@ data class InvidiousThumbnail(
     val width: Int = 0,
     val height: Int = 0
 )
+
+@Serializable
+data class InvidiousVideoSearchResultDto(
+    val videoId: String = "",
+    val title: String = "",
+    val author: String = "",
+    val authorId: String = "",
+    val videoThumbnails: List<InvidiousThumbnail> = emptyList()
+)
+
+@Serializable
+data class InvidiousChannelSearchResultDto(
+    val authorId: String = "",
+    val author: String = "",
+    val authorThumbnails: List<InvidiousThumbnail> = emptyList()
+)
